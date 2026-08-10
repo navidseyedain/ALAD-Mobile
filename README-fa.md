@@ -10,12 +10,12 @@
 <p><strong>دوبله همزمان و زنده برای تمام اپلیکیشن‌های اندروید، با قدرت گرفتن از مدل Gemini 3.5 Live Translate.</strong></p>
 
 <p>
-  <a href="https://github.com/navidseyedain/alad-mobile/stargazers"><img src="https://img.shields.io/github/stars/navidseyedain/alad-mobile?style=for-the-badge&color=FFD700" alt="Stars"></a>
-  <img src="https://img.shields.io/badge/Android-10%2B-3DDC84?style=for-the-badge&logo=android&logoColor=white" alt="Android">
-  <img src="https://img.shields.io/badge/Kotlin-1.9%2B-7F52FF?style=for-the-badge&logo=kotlin&logoColor=white" alt="Kotlin">
-  <img src="https://img.shields.io/badge/Powered%20By-Gemini%203.5%20Live-00C896?style=for-the-badge&logo=google&logoColor=white" alt="Gemini">
-  <img src="https://img.shields.io/badge/Languages-78-blueviolet?style=for-the-badge" alt="78 Languages">
-  <img src="https://img.shields.io/badge/License-MIT-green?style=for-the-badge" alt="MIT License">
+  <a href="https://github.com/navidseyedain/ALAD-Mobile/stargazers"><img src="https://img.shields.io/github/stars/navidseyedain/ALAD-Mobile?style=for-the-badge&color=FFD700" alt="Stars"></a>
+  <a href="https://developer.android.com/"><img src="https://img.shields.io/badge/Android-10%2B-3DDC84?style=for-the-badge&logo=android&logoColor=white" alt="Android"></a>
+  <a href="https://kotlinlang.org/"><img src="https://img.shields.io/badge/Kotlin-1.9%2B-7F52FF?style=for-the-badge&logo=kotlin&logoColor=white" alt="Kotlin"></a>
+  <a href="https://aistudio.google.com/"><img src="https://img.shields.io/badge/Powered%20By-Gemini%203.5%20Live-00C896?style=for-the-badge&logo=google&logoColor=white" alt="Gemini"></a>
+  <a href="https://github.com/navidseyedain/ALAD-Mobile/blob/main/README-fa.md#%EF%B8%8F-پشتیبانی-از-۷۸-زبان"><img src="https://img.shields.io/badge/Languages-78-blueviolet?style=for-the-badge" alt="78 Languages"></a>
+  <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-green?style=for-the-badge" alt="MIT License"></a>
 </p>
 
 <p>
