@@ -56,10 +56,15 @@ Unlike traditional captioning or subtitle tools, ALAD produces **live spoken aud
 <br/>
 
 **Watch the Demo Video:**
+
+
+
+
+
 <div align="center">
-  <video src="https://github.com/navidseyedain/ALAD-Mobile/raw/main/docs/Screenrecorder-ALADMobile.mp4" controls="controls" width="100%" height="auto">
+  <video src="[https://github.com/navidseyedain/ALAD-Mobile/raw/main/docs/Screenrecorder-ALADMobile.mp4](https://github.com/user-attachments/assets/d84752e5-3f69-4930-9b5b-a8e7c54ae9e1)" controls="controls" width="100%" height="auto">
     Your browser does not support the video tag.
-    <a href="https://github.com/navidseyedain/ALAD-Mobile/raw/main/docs/Screenrecorder-ALADMobile.mp4">Download the video here</a>
+    <a href="[https://github.com/navidseyedain/ALAD-Mobile/raw/main/docs/Screenrecorder-ALADMobile.mp4](https://github.com/user-attachments/assets/d84752e5-3f69-4930-9b5b-a8e7c54ae9e1)">Download the video here</a>
   </video>
 </div>
 
