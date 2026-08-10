@@ -57,7 +57,7 @@ Unlike traditional captioning or subtitle tools, ALAD produces **live spoken aud
 
 **Watch the Demo Video:**
 
-
+https://github.com/user-attachments/assets/d84752e5-3f69-4930-9b5b-a8e7c54ae9e1
 
 
 
