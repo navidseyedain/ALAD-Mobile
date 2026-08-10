@@ -23,7 +23,7 @@
   No subscriptions. No accounts. 100% free and open-source.
 </p>
 
-<h3><a href="https://github.com/navidseyedain/ALAD-Mobile/releases/latest/download/app-debug.apk">📥 Download APK (Latest Version)</a></h3>
+<a href="https://github.com/navidseyedain/ALAD-Mobile/releases/latest/download/app-debug.apk"><img src="https://img.shields.io/badge/Download_APK-Latest_Version-FF5722?style=for-the-badge&logo=android&logoColor=white" alt="Download APK" /></a>
 
 <br/>
 

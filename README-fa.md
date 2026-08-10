@@ -23,9 +23,7 @@
   بدون نیاز به اشتراک. بدون نیاز به ساخت حساب. ۱۰۰٪ رایگان و متن‌باز.
 </p>
 
-<h3><a href="https://github.com/navidseyedain/ALAD-Mobile/releases/latest/download/app-debug.apk">📥 دانلود مستقیم فایل نصب (APK)</a></h3>
-
-<br/>
+<a href="https://github.com/navidseyedain/ALAD-Mobile/releases/latest/download/app-debug.apk"><img src="https://img.shields.io/badge/دانلود_مستقیم-فایل_نصب_(APK)-FF5722?style=for-the-badge&logo=android&logoColor=white" alt="Download APK" /></a>
 
 </div>
 
