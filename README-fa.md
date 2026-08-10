@@ -23,6 +23,8 @@
   بدون نیاز به اشتراک. بدون نیاز به ساخت حساب. ۱۰۰٪ رایگان و متن‌باز.
 </p>
 
+<h3><a href="https://github.com/navidseyedain/ALAD-Mobile/releases/latest/download/app-debug.apk">📥 دانلود مستقیم فایل نصب (APK)</a></h3>
+
 <br/>
 
 </div>

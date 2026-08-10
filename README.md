@@ -23,6 +23,8 @@
   No subscriptions. No accounts. 100% free and open-source.
 </p>
 
+<h3><a href="https://github.com/navidseyedain/ALAD-Mobile/releases/latest/download/app-debug.apk">📥 Download APK (Latest Version)</a></h3>
+
 <br/>
 
 </div>
