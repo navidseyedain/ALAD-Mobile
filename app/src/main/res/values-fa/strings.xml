@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">ALAD</string>
+    <string name="app_name_full">ALAD (Live Audio Dubbing Mobile)</string>
+    <string name="system_status">وضعیت سیستم</string>
+    <string name="target_dubbing_language">زبان دوبله مقصد</string>
+    <string name="select_language">انتخاب زبان</string>
+    <string name="no_results_found">نتیجه‌ای یافت نشد</string>
+    <string name="floating_widget">ویجت شناور</string>
+    <string name="enable_overlay">جهت کنترل برنامه در پس‌زمینه فعال کنید</string>
+    <string name="grant_permission_widget">برای استفاده از ویجت اجازه دسترسی بدهید</string>
+    <string name="btn_stop">پایان دوبله</string>
+    <string name="btn_start">شروع دوبله</string>
+    <string name="settings">تنظیمات</string>
+    <string name="gemini_api_key">کلید API جمینای</string>
+    <string name="dubbing_volume">بلندی صدای دوبله: %1$d%%</string>
+    <string name="volume_description">صدای هوش مصنوعی را کنترل می‌کند. صدای پس‌زمینه (مانند ویدیو) به طور خودکار کم خواهد شد.</string>
+    <string name="save_settings">ذخیره تنظیمات</string>
+    <string name="settings_saved">تنظیمات ذخیره شد</string>
+    <string name="hide">مخفی</string>
+    <string name="show">نمایش</string>
+    <string name="get_api_key">دریافت کلید API جمینای</string>
+    <string name="api_key_guide">برای استفاده از برنامه، باید یک کلید API رایگان از Google AI Studio دریافت کنید.</string>
+    <string name="help_title">راهنمای استفاده از ALAD</string>
+    <string name="help_content">۱. به تنظیمات بروید و کلید API خود را وارد کنید.\n۲. زبان مقصد را انتخاب کنید.\n۳. روی «شروع دوبله» کلیک کنید تا ترجمه همزمان آغاز شود.\n۴. از ویجت شناور برای کنترل برنامه هنگام استفاده از برنامه‌های دیگر استفاده کنید.</string>
+    <string name="close">بستن</string>
+</resources>
