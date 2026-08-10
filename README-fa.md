@@ -43,6 +43,28 @@
 
 ---
 
+## 🎬 اسکرین‌شات‌ها و دمو
+
+<div align="center">
+  <img src="docs/Screenshot1.jpg" width="18%" />
+  <img src="docs/Screenshot2.jpg" width="18%" />
+  <img src="docs/Screenshot3.jpg" width="18%" />
+  <img src="docs/Screenshot4.jpg" width="18%" />
+  <img src="docs/Screenshot5.jpg" width="18%" />
+</div>
+
+<br/>
+
+**مشاهده ویدیوی دمو:**
+<div align="center">
+  <video src="https://github.com/navidseyedain/ALAD-Mobile/raw/main/docs/Screenrecorder-ALADMobile.mp4" controls="controls" width="100%" height="auto">
+    Your browser does not support the video tag.
+    <a href="https://github.com/navidseyedain/ALAD-Mobile/raw/main/docs/Screenrecorder-ALADMobile.mp4">Download the video here</a>
+  </video>
+</div>
+
+---
+
 ## ✨ ویژگی‌ها
 
 ### 🎙️ هسته اصلی: دوبله زنده با هوش مصنوعی

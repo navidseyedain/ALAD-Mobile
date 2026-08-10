@@ -43,6 +43,28 @@ Unlike traditional captioning or subtitle tools, ALAD produces **live spoken aud
 
 ---
 
+## 🎬 Screenshots & Demo
+
+<div align="center">
+  <img src="docs/Screenshot1.jpg" width="18%" />
+  <img src="docs/Screenshot2.jpg" width="18%" />
+  <img src="docs/Screenshot3.jpg" width="18%" />
+  <img src="docs/Screenshot4.jpg" width="18%" />
+  <img src="docs/Screenshot5.jpg" width="18%" />
+</div>
+
+<br/>
+
+**Watch the Demo Video:**
+<div align="center">
+  <video src="https://github.com/navidseyedain/ALAD-Mobile/raw/main/docs/Screenrecorder-ALADMobile.mp4" controls="controls" width="100%" height="auto">
+    Your browser does not support the video tag.
+    <a href="https://github.com/navidseyedain/ALAD-Mobile/raw/main/docs/Screenrecorder-ALADMobile.mp4">Download the video here</a>
+  </video>
+</div>
+
+---
+
 ## ✨ Features
 
 ### 🎙️ Core: Live AI Dubbing
