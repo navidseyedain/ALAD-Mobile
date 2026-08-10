@@ -134,13 +134,81 @@ Not limited to one app. If the app plays audio on your phone and allows internal
 
 ---
 
-## 🔒 Privacy & Security
+## 🧠 How It Works
 
-- **Direct Connection:** The app connects *directly* from your phone to Google's Gemini API via WebSocket. There is no middleman server.
-- **Local Storage:** Your API key and preferences are stored securely and locally on your device using Android DataStore.
+| Component | Technology | Purpose |
+|---|---|---|
+| **Audio Capture** | `MediaProjection API` | Captures internal system audio directly from any playing app |
+| **AI Model** | `gemini-3.5-live-translate-preview` | Real-time bidirectional speech translation |
+| **Protocol** | `WebSocket (BidiGenerateContent)` | Persistent low-latency streaming to Google's cloud |
+| **Playback** | `AudioTrack / MediaPlayer` | Plays the dubbed audio stream to the user |
+| **Lifecycle** | `Foreground Service` | Keeps the dubbing active even in the background |
+| **Settings Sync** | `Android DataStore` | Stores API key and language preferences securely |
+
+---
+
+## 📁 Project Structure
+
+```text
+ALAD-Mobile/
+├── app/src/main/
+│   ├── kotlin/com/alad/app/
+│   │   ├── core/           # WebSocket, Foreground Service, Audio Managers
+│   │   ├── data/           # DataStore repositories
+│   │   ├── presentation/   # Jetpack Compose Screens & ViewModels
+│   │   └── MainActivity.kt # Entry point & Permissions
+│   └── AndroidManifest.xml # Permissions & Services declaration
+├── docs/                   # Screenshots and Video demo for README
+└── build.gradle.kts        # App dependencies
+```
+
+---
+
+## 🔧 Troubleshooting
+
+| Problem | Solution |
+|---|---|
+| **No audio output after starting** | Ensure the target app is playing audio. Check if your API key is valid and has quota remaining. |
+| **"WebSocket connection failed"** | Your API key may be incorrect or your internet connection dropped. Try regenerating it at AI Studio. |
+| **App stops dubbing abruptly** | Android might be killing the background service. Go to App Info > Battery and select "Unrestricted". |
+| **Can't capture audio from some apps** | Some apps (like phone dialers or DRM-protected apps) block internal audio capture at the OS level. |
+
+---
+
+## 🗺️ Roadmap
+
+- [ ] Publish to Google Play Store
+- [ ] Language auto-detection (detect source language automatically)
+- [ ] Custom voice selection (male/female/neutral)
+- [ ] Support for Bluetooth headset microphone capture
+- [ ] Audio volume balance controls
+
+---
+
+## 🤝 Contributing
+
+Contributions, issues, and feature requests are welcome!
+
+1. Fork the repository
+2. Create your feature branch: `git checkout -b feature/AmazingFeature`
+3. Commit your changes: `git commit -m 'feat: add AmazingFeature'`
+4. Push to the branch: `git push origin feature/AmazingFeature`
+5. Open a Pull Request
 
 ---
 
 ## 📜 License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+---
+
+## 🙏 Acknowledgments
+
+- **Google DeepMind** for the Gemini 3.5 Live Translate model
+- **Google AI Studio** for providing free API access
+
+<div align="center">
+If ALAD saved you from reading subtitles for even one video — give it a ⭐<br/>
+Made with ❤️ for language learners, travelers, and curious minds everywhere.
+</div>
