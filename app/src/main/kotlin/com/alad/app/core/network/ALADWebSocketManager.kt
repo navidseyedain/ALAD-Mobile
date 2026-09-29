@@ -10,6 +10,7 @@ import org.json.JSONObject
 class ALADWebSocketManager(private val client: OkHttpClient) {
     private var webSocket: WebSocket? = null
     var onBinaryMessageReceived: ((ByteArray) -> Unit)? = null
+    var onTextMessageReceived: ((String) -> Unit)? = null
     var onStatusChanged: ((String) -> Unit)? = null
 
     companion object {
@@ -17,34 +18,74 @@ class ALADWebSocketManager(private val client: OkHttpClient) {
         private const val GEMINI_WS_URL = "wss://generativelanguage.googleapis.com/ws/google.ai.generativelanguage.v1beta.GenerativeService.BidiGenerateContent"
     }
 
-    private var isGeminiConnection = true
     private var isSetupComplete = false
+    private var currentVoicePersona = "Puck"
+    private var currentDubbingMode = "HYBRID"
 
-    fun connect(apiKey: String, sourceLang: String, targetLang: String) {
+    fun connect(
+        apiKey: String,
+        sourceLang: String,
+        targetLang: String,
+        voicePersona: String = "Puck",
+        dubbingMode: String = "HYBRID"
+    ) {
+        currentVoicePersona = voicePersona
+        currentDubbingMode = dubbingMode
         val finalUrl = "$GEMINI_WS_URL?key=$apiKey"
         val request = Request.Builder().url(finalUrl).build()
         isSetupComplete = false
-        
+
         webSocket = client.newWebSocket(request, object : WebSocketListener() {
             override fun onOpen(webSocket: WebSocket, response: Response) {
                 Log.d(TAG, "Connected to Gemini Live API")
                 onStatusChanged?.invoke("Connected")
-                sendGeminiSetup(targetLang)
+                sendGeminiSetup(targetLang, currentVoicePersona, currentDubbingMode)
             }
 
             override fun onMessage(webSocket: WebSocket, text: String) {
                 Log.d(TAG, "Raw message: $text")
                 try {
                     val json = JSONObject(text)
-                    
+
                     if (json.has("serverContent") || json.has("server_content")) {
                         val serverContent = json.optJSONObject("serverContent") ?: json.optJSONObject("server_content")
-                        if (serverContent != null && (serverContent.has("modelTurn") || serverContent.has("model_turn"))) {
+                        if (serverContent != null) {
+                            // 1. Output transcription: translated text for live subtitles
+                            val outputTranscription = serverContent.optJSONObject("outputTranscription")
+                                ?: serverContent.optJSONObject("output_transcription")
+                            if (outputTranscription != null) {
+                                val translatedText = outputTranscription.optString("text", "")
+                                if (translatedText.isNotEmpty()) {
+                                    Log.d(TAG, "Live subtitle output: $translatedText")
+                                    onTextMessageReceived?.invoke(translatedText)
+                                }
+                            }
+
+                            // 2. Input transcription: source speech transcript
+                            val inputTranscription = serverContent.optJSONObject("inputTranscription")
+                                ?: serverContent.optJSONObject("input_transcription")
+                            if (inputTranscription != null) {
+                                val sourceText = inputTranscription.optString("text", "")
+                                if (sourceText.isNotEmpty()) {
+                                    Log.d(TAG, "Source speech input: $sourceText")
+                                }
+                            }
+
+                            // 3. Model turn parts: audio PCM chunks & optional text parts
                             val modelTurn = serverContent.optJSONObject("modelTurn") ?: serverContent.optJSONObject("model_turn")
                             val parts = modelTurn?.optJSONArray("parts")
                             if (parts != null) {
                                 for (i in 0 until parts.length()) {
                                     val part = parts.getJSONObject(i)
+
+                                    if (part.has("text")) {
+                                        val textDelta = part.optString("text", "")
+                                        if (textDelta.isNotEmpty()) {
+                                            Log.d(TAG, "Part text: $textDelta")
+                                            onTextMessageReceived?.invoke(textDelta)
+                                        }
+                                    }
+
                                     val inlineData = part.optJSONObject("inlineData") ?: part.optJSONObject("inline_data")
                                     if (inlineData != null) {
                                         val base64Data = inlineData.getString("data")
@@ -56,6 +97,7 @@ class ALADWebSocketManager(private val client: OkHttpClient) {
                         }
                     } else if (json.has("setupComplete") || json.has("setup_complete")) {
                         isSetupComplete = true
+                        Log.d(TAG, "Gemini Setup Complete - Ready for audio streaming")
                         onStatusChanged?.invoke("Gemini Ready")
                         pendingAudio.forEach { sendAudioNow(it) }
                         pendingAudio.clear()
@@ -87,24 +129,37 @@ class ALADWebSocketManager(private val client: OkHttpClient) {
             }
         })
     }
-    
-    private fun sendGeminiSetup(targetLang: String) {
+
+    private fun sendGeminiSetup(targetLang: String, voicePersona: String, dubbingMode: String) {
         val targetLangCode = targetLang.split("-")[0]
         val setupPayload = JSONObject().apply {
             put("setup", JSONObject().apply {
                 put("model", "models/gemini-3.5-live-translate-preview")
                 put("generationConfig", JSONObject().apply {
                     put("responseModalities", JSONArray().put("AUDIO"))
+
+                    put("speechConfig", JSONObject().apply {
+                        put("voiceConfig", JSONObject().apply {
+                            put("prebuiltVoiceConfig", JSONObject().apply {
+                                put("voiceName", voicePersona)
+                            })
+                        })
+                    })
+
                     put("translationConfig", JSONObject().apply {
                         put("targetLanguageCode", targetLangCode)
                         put("echoTargetLanguage", true)
                     })
                 })
+                // Direct children of BidiGenerateContentSetup according to Google Gemini Live API specification
+                put("inputAudioTranscription", JSONObject())
+                put("outputAudioTranscription", JSONObject())
                 put("sessionResumption", JSONObject().apply {
                     put("handle", JSONObject.NULL)
                 })
             })
         }
+        Log.d(TAG, "Setup message payload: $setupPayload")
         webSocket?.send(setupPayload.toString())
     }
 
@@ -119,7 +174,7 @@ class ALADWebSocketManager(private val client: OkHttpClient) {
         }
         sendAudioNow(base64Audio)
     }
-    
+
     private fun sendAudioNow(base64Audio: String) {
         val inputPayload = JSONObject().apply {
             put("realtimeInput", JSONObject().apply {

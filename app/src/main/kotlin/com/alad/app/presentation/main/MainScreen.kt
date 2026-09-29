@@ -56,6 +56,10 @@ fun MainScreen(
     onDisconnectClicked: () -> Unit
 ) {
     val isConnected by viewModel.isConnected.collectAsState()
+    val amplitude by viewModel.audioAmplitude.collectAsState()
+    val liveSubtitleText by viewModel.liveSubtitleText.collectAsState()
+    val selectedVoice by viewModel.voicePersona.collectAsState()
+    val selectedMode by viewModel.dubbingMode.collectAsState()
     val context = LocalContext.current
     var showHelpDialog by remember { mutableStateOf(false) }
 
@@ -238,8 +242,64 @@ fun MainScreen(
                 // Neon Audio Waveform Visualizer
                 AnimatedWaveform(
                     isConnected = isConnected,
+                    amplitude = amplitude,
                     modifier = Modifier.padding(vertical = 8.dp)
                 )
+
+                // Live Subtitle Transcript Banner (Issue #4)
+                androidx.compose.animation.AnimatedVisibility(
+                    visible = isConnected && liveSubtitleText.isNotEmpty(),
+                    enter = androidx.compose.animation.fadeIn() + androidx.compose.animation.expandVertically(),
+                    exit = androidx.compose.animation.fadeOut() + androidx.compose.animation.shrinkVertically()
+                ) {
+                    GlassCard(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = 4.dp),
+                        shape = RoundedCornerShape(18.dp),
+                        borderColor = NeonCyan,
+                        borderAlpha = 0.35f
+                    ) {
+                        Column(modifier = Modifier.padding(14.dp)) {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.SpaceBetween
+                            ) {
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Box(
+                                        modifier = Modifier
+                                            .size(7.dp)
+                                            .clip(CircleShape)
+                                            .background(NeonCyan)
+                                    )
+                                    Spacer(modifier = Modifier.width(6.dp))
+                                    Text(
+                                        text = stringResource(R.string.live_subtitles).uppercase(),
+                                        color = NeonCyan,
+                                        fontSize = 11.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        letterSpacing = 1.sp
+                                    )
+                                }
+
+                                Text(
+                                    text = "$selectedVoice • $selectedMode",
+                                    color = TextSecondary,
+                                    fontSize = 11.sp
+                                )
+                            }
+                            Spacer(modifier = Modifier.height(6.dp))
+                            Text(
+                                text = liveSubtitleText,
+                                color = Color.White,
+                                fontSize = 14.sp,
+                                lineHeight = 20.sp,
+                                fontWeight = FontWeight.Medium
+                            )
+                        }
+                    }
+                }
 
                 // Language Selection Card
                 val targetLang by viewModel.targetLang.collectAsState()
@@ -428,9 +488,9 @@ fun MainScreen(
 @Composable
 fun AnimatedWaveform(
     isConnected: Boolean,
+    amplitude: Float,
     modifier: Modifier = Modifier
 ) {
-    val amplitude by com.alad.app.core.service.AudioDubbingForegroundService.audioAmplitude.collectAsState()
     val animatedAmplitude by animateFloatAsState(
         targetValue = if (isConnected) amplitude else 0f,
         animationSpec = tween(50, easing = LinearEasing),

@@ -26,4 +26,21 @@
     <string name="help_title">How to use ALAD</string>
     <string name="help_content">1. Go to settings and set your Gemini API Key.\n2. Choose your target language.\n3. Tap \'Start Dubbing\' to begin real-time translation.\n4. Use the floating widget to control dubbing while using other apps.</string>
     <string name="close">Close</string>
+
+    <!-- New v1.2.0 features -->
+    <string name="voice_persona">AI Voice Persona</string>
+    <string name="voice_persona_desc">Choose the AI narrator voice for live speech synthesis</string>
+    <string name="voice_puck">Puck (Energetic &amp; Friendly)</string>
+    <string name="voice_charon">Charon (Deep &amp; Resonant)</string>
+    <string name="voice_aoede">Aoede (Melodic &amp; Warm)</string>
+    <string name="voice_fenrir">Fenrir (Crisp &amp; Authoritative)</string>
+    <string name="voice_kore">Kore (Gentle &amp; Calm)</string>
+
+    <string name="dubbing_mode">Dubbing Mode</string>
+    <string name="mode_hybrid">Voice + Subtitles</string>
+    <string name="mode_audio_only">Audio Only</string>
+    <string name="mode_subtitle_only">Subtitles Only (Silent)</string>
+    <string name="live_subtitles">Live Subtitles</string>
+    <string name="subtitles_preview">Live Translation Transcript</string>
+    <string name="subtitles_waiting">Waiting for speech input...</string>
 </resources>

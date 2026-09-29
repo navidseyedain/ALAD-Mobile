@@ -11,8 +11,8 @@ android {
         applicationId = "com.alad.app"
         minSdk = 29
         targetSdk = 34
-        versionCode = 2
-        versionName = "1.1.0"
+        versionCode = 3
+        versionName = "1.2.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {
@@ -20,10 +20,34 @@ android {
         }
     }
 
+    signingConfigs {
+        create("release") {
+            val keystoreFile = rootProject.file("alad-key.jks")
+            if (keystoreFile.exists()) {
+                storeFile = keystoreFile
+                storePassword = project.findProperty("ALAD_STORE_PASSWORD")?.toString()
+                    ?: System.getenv("ALAD_STORE_PASSWORD") ?: ""
+                keyAlias = project.findProperty("ALAD_KEY_ALIAS")?.toString()
+                    ?: System.getenv("ALAD_KEY_ALIAS") ?: "key0"
+                keyPassword = project.findProperty("ALAD_KEY_PASSWORD")?.toString()
+                    ?: System.getenv("ALAD_KEY_PASSWORD") ?: ""
+                enableV1Signing = true
+                enableV2Signing = true
+                enableV3Signing = true
+                enableV4Signing = true
+            }
+        }
+    }
+
     buildTypes {
         release {
             isMinifyEnabled = false
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
+            val keystoreFile = rootProject.file("alad-key.jks")
+            val storePass = project.findProperty("ALAD_STORE_PASSWORD")?.toString() ?: System.getenv("ALAD_STORE_PASSWORD")
+            if (keystoreFile.exists() && !storePass.isNullOrEmpty()) {
+                signingConfig = signingConfigs.getByName("release")
+            }
         }
     }
     lint {

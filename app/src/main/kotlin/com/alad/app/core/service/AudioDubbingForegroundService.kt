@@ -10,45 +10,50 @@ import android.content.pm.ServiceInfo
 import android.media.projection.MediaProjection
 import android.media.projection.MediaProjectionManager
 import android.os.Build
+import android.os.Handler
 import android.os.IBinder
+import android.os.Looper
 import android.util.Log
 import androidx.core.app.NotificationCompat
 import com.alad.app.core.audio.AudioCaptureManager
 import com.alad.app.core.audio.AudioPlayerManager
+import com.alad.app.core.audio.AudioUtils
 import com.alad.app.core.network.ALADWebSocketManager
+import com.alad.app.data.repository.DubbingSessionRepository
 import com.alad.app.data.repository.UserPreferencesRepository
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
-import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import okhttp3.OkHttpClient
-import kotlin.math.sqrt
+import java.util.concurrent.TimeUnit
 
 class AudioDubbingForegroundService : Service() {
 
     companion object {
         private const val CHANNEL_ID = "alad_dubbing_channel"
         private const val NOTIFICATION_ID = 101
-        
+
         const val ACTION_START = "ACTION_START"
         const val ACTION_STOP = "ACTION_STOP"
         const val EXTRA_RESULT_CODE = "EXTRA_RESULT_CODE"
         const val EXTRA_RESULT_DATA = "EXTRA_RESULT_DATA"
         private const val TAG = "DubbingService"
-        
-        val isRunning = MutableStateFlow(false)
-        val audioAmplitude = MutableStateFlow(0f)
+
+        // Delegated to DubbingSessionRepository for backward compatibility
+        val isRunning: StateFlow<Boolean> get() = DubbingSessionRepository.isDubbingRunning
+        val audioAmplitude: StateFlow<Float> get() = DubbingSessionRepository.audioAmplitude
     }
 
     private val serviceScope = CoroutineScope(Dispatchers.IO + Job())
-    
+
     private var mediaProjection: MediaProjection? = null
     private var audioCaptureManager: AudioCaptureManager? = null
     private var audioPlayerManager: AudioPlayerManager? = null
     private var webSocketManager: ALADWebSocketManager? = null
-    private var langObservationJob: Job? = null
+    private var settingsObservationJob: Job? = null
 
     override fun onCreate() {
         super.onCreate()
@@ -57,19 +62,24 @@ class AudioDubbingForegroundService : Service() {
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         val action = intent?.action
-        
+
         when (action) {
             ACTION_START -> {
                 val notification = createNotification()
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-                    startForeground(NOTIFICATION_ID, notification, ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PROJECTION)
+                    val serviceType = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+                        ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PROJECTION or ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PLAYBACK
+                    } else {
+                        ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PROJECTION
+                    }
+                    startForeground(NOTIFICATION_ID, notification, serviceType)
                 } else {
                     startForeground(NOTIFICATION_ID, notification)
                 }
-                
+
                 val resultCode = intent.getIntExtra(EXTRA_RESULT_CODE, 0)
                 val data = intent.getParcelableExtra<Intent>(EXTRA_RESULT_DATA)
-                
+
                 if (resultCode != 0 && data != null) {
                     startDubbing(resultCode, data)
                 }
@@ -85,94 +95,131 @@ class AudioDubbingForegroundService : Service() {
     }
 
     private fun startDubbing(resultCode: Int, data: Intent) {
-        isRunning.value = true
+        DubbingSessionRepository.setDubbingRunning(true)
+        DubbingSessionRepository.setConnectionStatus("Initializing...")
+        DubbingSessionRepository.clearSubtitle()
+
         val projectionManager = getSystemService(Context.MEDIA_PROJECTION_SERVICE) as MediaProjectionManager
-        mediaProjection = projectionManager.getMediaProjection(resultCode, data)
-        
+        val projection = projectionManager.getMediaProjection(resultCode, data)
+        if (projection == null) {
+            Log.e(TAG, "Failed to get MediaProjection! ResultCode: $resultCode")
+            DubbingSessionRepository.setConnectionStatus("Capture Denied")
+            DubbingSessionRepository.setDubbingRunning(false)
+            return
+        }
+
+        // CRITICAL FOR ANDROID 14 (API 34): Register MediaProjection.Callback before starting capture
+        val projectionCallback = object : MediaProjection.Callback() {
+            override fun onStop() {
+                Log.d(TAG, "MediaProjection stopped by system")
+                serviceScope.launch(Dispatchers.Main) {
+                    stopDubbing()
+                    stopSelf()
+                }
+            }
+        }
+        projection.registerCallback(projectionCallback, Handler(Looper.getMainLooper()))
+        mediaProjection = projection
+
         serviceScope.launch {
             val repository = UserPreferencesRepository(applicationContext)
-            
+
             val apiKey = repository.apiKeyFlow.first()
             val targetLang = repository.targetLangFlow.first()
             val volumeRatio = repository.volumeRatioFlow.first()
-            
-            webSocketManager = ALADWebSocketManager(OkHttpClient())
-            
-            audioPlayerManager = AudioPlayerManager(applicationContext)
-            audioPlayerManager?.start()
-            audioPlayerManager?.setVolume(volumeRatio)
-            
+            val voicePersona = repository.voicePersonaFlow.first()
+            val dubbingMode = repository.dubbingModeFlow.first()
+
+            val okHttpClient = OkHttpClient.Builder()
+                .pingInterval(15, TimeUnit.SECONDS)
+                .retryOnConnectionFailure(true)
+                .build()
+
+            webSocketManager = ALADWebSocketManager(okHttpClient)
+
+            // Only start AudioPlayerManager if not in SUBTITLE_ONLY mode
+            if (dubbingMode != UserPreferencesRepository.MODE_SUBTITLE_ONLY) {
+                audioPlayerManager = AudioPlayerManager(applicationContext)
+                audioPlayerManager?.start()
+                audioPlayerManager?.setVolume(volumeRatio)
+            }
+
             webSocketManager?.onStatusChanged = { status ->
-                android.os.Handler(android.os.Looper.getMainLooper()).post {
-                    android.widget.Toast.makeText(applicationContext, "WS Status: $status", android.widget.Toast.LENGTH_LONG).show()
+                DubbingSessionRepository.setConnectionStatus(status)
+            }
+
+            webSocketManager?.onTextMessageReceived = { textDelta ->
+                DubbingSessionRepository.appendSubtitleText(textDelta)
+            }
+
+            webSocketManager?.onBinaryMessageReceived = { audioChunk ->
+                if (dubbingMode != UserPreferencesRepository.MODE_SUBTITLE_ONLY) {
+                    audioPlayerManager?.playAudioData(audioChunk)
                 }
             }
-            
-            webSocketManager?.onBinaryMessageReceived = { audioChunk ->
-                audioPlayerManager?.playAudioData(audioChunk)
-            }
-            
-            // sourceLang is no longer used for Bidi Setup
-            webSocketManager?.connect(apiKey, "", targetLang)
-            
-            langObservationJob?.cancel()
-            langObservationJob = serviceScope.launch {
+
+            webSocketManager?.connect(
+                apiKey = apiKey,
+                sourceLang = "",
+                targetLang = targetLang,
+                voicePersona = voicePersona,
+                dubbingMode = dubbingMode
+            )
+
+            // Dynamic observation for target language changes during dubbing
+            settingsObservationJob?.cancel()
+            settingsObservationJob = serviceScope.launch {
                 var firstEmit = true
                 repository.targetLangFlow.collect { newLang ->
                     if (firstEmit) {
                         firstEmit = false
                     } else {
                         val currentKey = repository.apiKeyFlow.first()
+                        val currentVoice = repository.voicePersonaFlow.first()
+                        val currentMode = repository.dubbingModeFlow.first()
                         webSocketManager?.disconnect()
-                        webSocketManager?.connect(currentKey, "", newLang)
+                        webSocketManager?.connect(
+                            apiKey = currentKey,
+                            sourceLang = "",
+                            targetLang = newLang,
+                            voicePersona = currentVoice,
+                            dubbingMode = currentMode
+                        )
                     }
                 }
             }
-            
+
             audioCaptureManager = AudioCaptureManager()
             val appUid = applicationInfo.uid
-            
+
             mediaProjection?.let { projection ->
                 audioCaptureManager?.startCapture(projection, appUid) { pcmData ->
                     webSocketManager?.sendAudioData(pcmData)
-                    
-                    // Calculate RMS amplitude
-                    var sum = 0.0
-                    for (i in pcmData.indices step 2) {
-                        if (i + 1 < pcmData.size) {
-                            val sample = (pcmData[i].toInt() and 0xFF) or (pcmData[i+1].toInt() shl 8)
-                            val signedSample = sample.toShort().toFloat()
-                            sum += signedSample * signedSample
-                        }
-                    }
-                    val rms = if (pcmData.isNotEmpty()) sqrt(sum / (pcmData.size / 2)).toFloat() else 0f
-                    // Normalize and boost slightly for better visual effect (x3)
-                    val normalized = (rms / 32767f * 3f).coerceIn(0f, 1f)
-                    
-                    // Apply low-pass filter for smooth animation
-                    val current = audioAmplitude.value
-                    audioAmplitude.value = current * 0.5f + normalized * 0.5f
+
+                    // Process RMS and smoothed amplitude via decoupled AudioUtils
+                    val currentAmp = DubbingSessionRepository.audioAmplitude.value
+                    val newAmp = AudioUtils.processPcmAmplitude(pcmData, currentAmp)
+                    DubbingSessionRepository.setAudioAmplitude(newAmp)
                 }
             }
         }
     }
 
     private fun stopDubbing() {
-        isRunning.value = false
+        DubbingSessionRepository.resetSession()
+
         audioCaptureManager?.stopCapture()
         audioCaptureManager = null
-        
+
         audioPlayerManager?.stop()
         audioPlayerManager = null
-        
+
         webSocketManager?.disconnect()
         webSocketManager = null
-        
-        audioAmplitude.value = 0f
-        
-        langObservationJob?.cancel()
-        langObservationJob = null
-        
+
+        settingsObservationJob?.cancel()
+        settingsObservationJob = null
+
         mediaProjection?.stop()
         mediaProjection = null
     }
@@ -183,7 +230,7 @@ class AudioDubbingForegroundService : Service() {
 
     override fun onDestroy() {
         super.onDestroy()
-        if (isRunning.value) {
+        if (DubbingSessionRepository.isDubbingRunning.value) {
             stopDubbing()
         }
     }
@@ -226,5 +273,5 @@ class AudioDubbingForegroundService : Service() {
             .addAction(android.R.drawable.ic_menu_close_clear_cancel, "Disconnect", stopPendingIntent)
             .setOngoing(true)
             .build()
-    }
+        }
 }

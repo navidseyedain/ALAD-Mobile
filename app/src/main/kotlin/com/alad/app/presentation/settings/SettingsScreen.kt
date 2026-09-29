@@ -1,9 +1,6 @@
 package com.alad.app.presentation.settings
 
-import androidx.compose.foundation.BorderStroke
-import androidx.compose.foundation.background
-import androidx.compose.foundation.border
-import androidx.compose.foundation.clickable
+import androidx.compose.foundation.*
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.*
@@ -12,10 +9,8 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.OpenInNew
-import androidx.compose.material.icons.filled.Key
-import androidx.compose.material.icons.filled.Save
-import androidx.compose.material.icons.filled.Visibility
-import androidx.compose.material.icons.filled.VisibilityOff
+import androidx.compose.material.icons.automirrored.filled.*
+import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -33,6 +28,7 @@ import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.alad.app.R
+import com.alad.app.data.repository.UserPreferencesRepository
 import com.alad.app.ui.theme.*
 import kotlinx.coroutines.launch
 
@@ -42,9 +38,12 @@ fun SettingsScreen(viewModel: SettingsViewModel, onBack: () -> Unit = {}) {
     val context = LocalContext.current
     val uriHandler = LocalUriHandler.current
     val apiKey by viewModel.apiKey.collectAsState()
+    val selectedVoice by viewModel.voicePersona.collectAsState()
+    val selectedMode by viewModel.dubbingMode.collectAsState()
 
     val snackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
+    val scrollState = rememberScrollState()
     var apiKeyVisible by remember { mutableStateOf(false) }
 
     AmbientBackground {
@@ -82,10 +81,11 @@ fun SettingsScreen(viewModel: SettingsViewModel, onBack: () -> Unit = {}) {
                 modifier = Modifier
                     .fillMaxSize()
                     .padding(paddingValues)
+                    .verticalScroll(scrollState)
                     .padding(horizontal = 20.dp, vertical = 12.dp),
                 verticalArrangement = Arrangement.spacedBy(20.dp)
             ) {
-                // Main API Key Configuration Glass Card
+                // 1. Main API Key Configuration Glass Card
                 GlassCard(
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(24.dp),
@@ -222,7 +222,230 @@ fun SettingsScreen(viewModel: SettingsViewModel, onBack: () -> Unit = {}) {
                     }
                 }
 
-                Spacer(modifier = Modifier.weight(1f))
+                // 2. AI Voice Persona Selection Card (Roadmap v1.2.0)
+                GlassCard(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(24.dp),
+                    borderColor = NeonPurple,
+                    borderAlpha = 0.25f
+                ) {
+                    Column(modifier = Modifier.padding(20.dp)) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Box(
+                                modifier = Modifier
+                                    .size(40.dp)
+                                    .clip(CircleShape)
+                                    .background(NeonPurple.copy(alpha = 0.15f)),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.RecordVoiceOver,
+                                    contentDescription = null,
+                                    tint = NeonPurple,
+                                    modifier = Modifier.size(20.dp)
+                                )
+                            }
+
+                            Spacer(modifier = Modifier.width(12.dp))
+
+                            Column {
+                                Text(
+                                    text = stringResource(R.string.voice_persona),
+                                    fontWeight = FontWeight.Bold,
+                                    color = Color.White,
+                                    fontSize = 16.sp
+                                )
+                                Text(
+                                    text = stringResource(R.string.voice_persona_desc),
+                                    color = TextSecondary,
+                                    fontSize = 12.sp
+                                )
+                            }
+                        }
+
+                        Spacer(modifier = Modifier.height(16.dp))
+
+                        val voices = listOf(
+                            Triple("Puck", stringResource(R.string.voice_puck), "Energetic"),
+                            Triple("Charon", stringResource(R.string.voice_charon), "Deep"),
+                            Triple("Aoede", stringResource(R.string.voice_aoede), "Melodic"),
+                            Triple("Fenrir", stringResource(R.string.voice_fenrir), "Authoritative"),
+                            Triple("Kore", stringResource(R.string.voice_kore), "Calm")
+                        )
+
+                        voices.forEach { (voiceId, voiceLabel, badge) ->
+                            val isSelected = selectedVoice == voiceId
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(vertical = 4.dp)
+                                    .clip(RoundedCornerShape(14.dp))
+                                    .background(
+                                        if (isSelected) {
+                                            Brush.horizontalGradient(
+                                                listOf(NeonPurple.copy(alpha = 0.25f), NeonBlue.copy(alpha = 0.15f))
+                                            )
+                                        } else {
+                                            Brush.horizontalGradient(
+                                                listOf(Color.White.copy(alpha = 0.04f), Color.White.copy(alpha = 0.02f))
+                                            )
+                                        }
+                                    )
+                                    .border(
+                                        BorderStroke(
+                                            1.dp,
+                                            if (isSelected) NeonPurple else Color.White.copy(alpha = 0.08f)
+                                        ),
+                                        shape = RoundedCornerShape(14.dp)
+                                    )
+                                    .clickable { viewModel.updateVoicePersona(voiceId) }
+                                    .padding(horizontal = 14.dp, vertical = 10.dp)
+                            ) {
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.SpaceBetween
+                                ) {
+                                    Column(modifier = Modifier.weight(1f)) {
+                                        Text(
+                                            text = voiceLabel,
+                                            color = if (isSelected) Color.White else Color.White.copy(alpha = 0.85f),
+                                            fontSize = 14.sp,
+                                            fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal
+                                        )
+                                    }
+
+                                    if (isSelected) {
+                                        Box(
+                                            modifier = Modifier
+                                                .clip(RoundedCornerShape(6.dp))
+                                                .background(NeonPurple.copy(alpha = 0.3f))
+                                                .padding(horizontal = 8.dp, vertical = 2.dp)
+                                        ) {
+                                            Text(
+                                                text = badge.uppercase(),
+                                                color = NeonCyan,
+                                                fontSize = 10.sp,
+                                                fontWeight = FontWeight.Bold
+                                            )
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+
+                // 3. Dubbing Mode Card (Issue #4)
+                GlassCard(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(24.dp),
+                    borderColor = NeonBlue,
+                    borderAlpha = 0.25f
+                ) {
+                    Column(modifier = Modifier.padding(20.dp)) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Box(
+                                modifier = Modifier
+                                    .size(40.dp)
+                                    .clip(CircleShape)
+                                    .background(NeonBlue.copy(alpha = 0.15f)),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Tune,
+                                    contentDescription = null,
+                                    tint = NeonBlue,
+                                    modifier = Modifier.size(20.dp)
+                                )
+                            }
+
+                            Spacer(modifier = Modifier.width(12.dp))
+
+                            Column {
+                                Text(
+                                    text = stringResource(R.string.dubbing_mode),
+                                    fontWeight = FontWeight.Bold,
+                                    color = Color.White,
+                                    fontSize = 16.sp
+                                )
+                                Text(
+                                    text = "Choose audio, subtitles, or both",
+                                    color = TextSecondary,
+                                    fontSize = 12.sp
+                                )
+                            }
+                        }
+
+                        Spacer(modifier = Modifier.height(16.dp))
+
+                        val modes = listOf(
+                            Triple(UserPreferencesRepository.MODE_HYBRID, stringResource(R.string.mode_hybrid), Icons.Default.GraphicEq),
+                            Triple(UserPreferencesRepository.MODE_AUDIO_ONLY, stringResource(R.string.mode_audio_only), Icons.AutoMirrored.Filled.VolumeUp),
+                            Triple(UserPreferencesRepository.MODE_SUBTITLE_ONLY, stringResource(R.string.mode_subtitle_only), Icons.Default.Subtitles)
+                        )
+
+                        modes.forEach { (modeId, modeLabel, icon) ->
+                            val isSelected = selectedMode == modeId
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(vertical = 4.dp)
+                                    .clip(RoundedCornerShape(14.dp))
+                                    .background(
+                                        if (isSelected) {
+                                            Brush.horizontalGradient(
+                                                listOf(NeonBlue.copy(alpha = 0.25f), NeonCyan.copy(alpha = 0.15f))
+                                            )
+                                        } else {
+                                            Brush.horizontalGradient(
+                                                listOf(Color.White.copy(alpha = 0.04f), Color.White.copy(alpha = 0.02f))
+                                            )
+                                        }
+                                    )
+                                    .border(
+                                        BorderStroke(
+                                            1.dp,
+                                            if (isSelected) NeonCyan else Color.White.copy(alpha = 0.08f)
+                                        ),
+                                        shape = RoundedCornerShape(14.dp)
+                                    )
+                                    .clickable { viewModel.updateDubbingMode(modeId) }
+                                    .padding(horizontal = 14.dp, vertical = 12.dp)
+                            ) {
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Icon(
+                                        imageVector = icon,
+                                        contentDescription = null,
+                                        tint = if (isSelected) NeonCyan else TextSecondary,
+                                        modifier = Modifier.size(20.dp)
+                                    )
+                                    Spacer(modifier = Modifier.width(12.dp))
+                                    Text(
+                                        text = modeLabel,
+                                        color = if (isSelected) Color.White else Color.White.copy(alpha = 0.85f),
+                                        fontSize = 14.sp,
+                                        fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
+                                        modifier = Modifier.weight(1f)
+                                    )
+                                    if (isSelected) {
+                                        Icon(
+                                            imageVector = Icons.Default.CheckCircle,
+                                            contentDescription = null,
+                                            tint = NeonCyan,
+                                            modifier = Modifier.size(18.dp)
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(10.dp))
 
                 // Save Settings Button
                 val interactionSource = remember { MutableInteractionSource() }
@@ -279,6 +502,8 @@ fun SettingsScreen(viewModel: SettingsViewModel, onBack: () -> Unit = {}) {
                         )
                     }
                 }
+
+                Spacer(modifier = Modifier.height(20.dp))
             }
         }
     }

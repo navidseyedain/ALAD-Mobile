@@ -17,7 +17,8 @@ class AudioCaptureManager {
         const val SAMPLE_RATE = 16000
         const val CHANNEL_CONFIG = AudioFormat.CHANNEL_IN_MONO
         const val AUDIO_FORMAT = AudioFormat.ENCODING_PCM_16BIT
-        val BUFFER_SIZE = AudioRecord.getMinBufferSize(SAMPLE_RATE, CHANNEL_CONFIG, AUDIO_FORMAT)
+        val MIN_BUFFER_SIZE = AudioRecord.getMinBufferSize(SAMPLE_RATE, CHANNEL_CONFIG, AUDIO_FORMAT)
+        const val CHUNK_SIZE = 3200 // 100ms of 16kHz 16-bit mono PCM (Gemini Live specification)
     }
 
     @SuppressLint("MissingPermission")
@@ -42,29 +43,37 @@ class AudioCaptureManager {
                 .setChannelMask(CHANNEL_CONFIG)
                 .build()
 
+            val bufferSize = maxOf(MIN_BUFFER_SIZE, CHUNK_SIZE * 2)
+
             audioRecord = AudioRecord.Builder()
                 .setAudioFormat(format)
                 .setAudioPlaybackCaptureConfig(config)
-                .setBufferSizeInBytes(BUFFER_SIZE)
+                .setBufferSizeInBytes(bufferSize)
                 .build()
+
+            if (audioRecord?.state != AudioRecord.STATE_INITIALIZED) {
+                Log.e(TAG, "AudioRecord failed to initialize! State: ${audioRecord?.state}")
+                return
+            }
 
             audioRecord?.startRecording()
             isRecording = true
+            Log.d(TAG, "AudioPlaybackCapture started successfully. Recording state: ${audioRecord?.recordingState}")
             
-            Thread {
-                val buffer = ByteArray(BUFFER_SIZE)
+            Thread({
+                val buffer = ByteArray(CHUNK_SIZE)
                 var chunksRead = 0
                 while (isRecording) {
                     val read = audioRecord?.read(buffer, 0, buffer.size) ?: 0
                     if (read > 0) {
                         chunksRead++
                         if (chunksRead % 50 == 0) {
-                            Log.d(TAG, "Captured 50 chunks of size $read")
+                            Log.d(TAG, "Captured 50 chunks of size $read ($CHUNK_SIZE expected)")
                         }
                         onAudioData(buffer.copyOf(read))
                     }
                 }
-            }.start()
+            }, "AudioCaptureThread").start()
         } catch (e: Exception) {
             Log.e(TAG, "Error starting capture", e)
         }
@@ -72,8 +81,12 @@ class AudioCaptureManager {
 
     fun stopCapture() {
         isRecording = false
-        audioRecord?.stop()
-        audioRecord?.release()
+        try {
+            audioRecord?.stop()
+            audioRecord?.release()
+        } catch (e: Exception) {
+            Log.w(TAG, "Error stopping audioRecord", e)
+        }
         audioRecord = null
     }
 }
