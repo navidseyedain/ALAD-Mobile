@@ -21,9 +21,11 @@ import com.alad.app.core.audio.AudioUtils
 import com.alad.app.core.network.ALADWebSocketManager
 import com.alad.app.data.repository.DubbingSessionRepository
 import com.alad.app.data.repository.UserPreferencesRepository
+import kotlinx.coroutines.CoroutineExceptionHandler
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
@@ -47,7 +49,11 @@ class AudioDubbingForegroundService : Service() {
         val audioAmplitude: StateFlow<Float> get() = DubbingSessionRepository.audioAmplitude
     }
 
-    private val serviceScope = CoroutineScope(Dispatchers.IO + Job())
+    private val coroutineExceptionHandler = CoroutineExceptionHandler { _, throwable ->
+        Log.e(TAG, "Unhandled exception in serviceScope", throwable)
+    }
+
+    private val serviceScope = CoroutineScope(Dispatchers.IO + SupervisorJob() + coroutineExceptionHandler)
 
     private var mediaProjection: MediaProjection? = null
     private var audioCaptureManager: AudioCaptureManager? = null
@@ -113,8 +119,13 @@ class AudioDubbingForegroundService : Service() {
             override fun onStop() {
                 Log.d(TAG, "MediaProjection stopped by system")
                 serviceScope.launch(Dispatchers.Main) {
-                    stopDubbing()
-                    stopSelf()
+                    try {
+                        stopDubbing()
+                        stopForeground(STOP_FOREGROUND_REMOVE)
+                        stopSelf()
+                    } catch (e: Exception) {
+                        Log.e(TAG, "Error stopping dubbing from projection callback", e)
+                    }
                 }
             }
         }
@@ -122,89 +133,98 @@ class AudioDubbingForegroundService : Service() {
         mediaProjection = projection
 
         serviceScope.launch {
-            val repository = UserPreferencesRepository(applicationContext)
+            try {
+                val repository = UserPreferencesRepository(applicationContext)
 
-            val apiKey = repository.apiKeyFlow.first()
-            val targetLang = repository.targetLangFlow.first()
-            val volumeRatio = repository.volumeRatioFlow.first()
-            val voicePersona = repository.voicePersonaFlow.first()
-            val dubbingMode = repository.dubbingModeFlow.first()
+                val apiKey = repository.apiKeyFlow.first()
+                val targetLang = repository.targetLangFlow.first()
+                val volumeRatio = repository.volumeRatioFlow.first()
+                val voicePersona = repository.voicePersonaFlow.first()
+                val dubbingMode = repository.dubbingModeFlow.first()
 
-            val okHttpClient = OkHttpClient.Builder()
-                .pingInterval(15, TimeUnit.SECONDS)
-                .retryOnConnectionFailure(true)
-                .build()
+                val okHttpClient = OkHttpClient.Builder()
+                    .pingInterval(15, TimeUnit.SECONDS)
+                    .retryOnConnectionFailure(true)
+                    .build()
 
-            webSocketManager = ALADWebSocketManager(okHttpClient)
+                webSocketManager = ALADWebSocketManager(okHttpClient)
 
-            // Only start AudioPlayerManager if not in SUBTITLE_ONLY mode
-            if (dubbingMode != UserPreferencesRepository.MODE_SUBTITLE_ONLY) {
-                audioPlayerManager = AudioPlayerManager(applicationContext)
-                audioPlayerManager?.start()
-                audioPlayerManager?.setVolume(volumeRatio)
-            }
-
-            webSocketManager?.onStatusChanged = { status ->
-                DubbingSessionRepository.setConnectionStatus(status)
-            }
-
-            webSocketManager?.onTextMessageReceived = { textDelta ->
-                DubbingSessionRepository.appendSubtitleText(textDelta)
-            }
-
-            webSocketManager?.onTurnComplete = {
-                DubbingSessionRepository.onTurnComplete()
-            }
-
-            webSocketManager?.onBinaryMessageReceived = { audioChunk ->
+                // Only start AudioPlayerManager if not in SUBTITLE_ONLY mode
                 if (dubbingMode != UserPreferencesRepository.MODE_SUBTITLE_ONLY) {
-                    audioPlayerManager?.playAudioData(audioChunk)
+                    audioPlayerManager = AudioPlayerManager(applicationContext)
+                    audioPlayerManager?.start()
+                    audioPlayerManager?.setVolume(volumeRatio)
                 }
-            }
 
-            webSocketManager?.connect(
-                apiKey = apiKey,
-                sourceLang = "",
-                targetLang = targetLang,
-                voicePersona = voicePersona,
-                dubbingMode = dubbingMode
-            )
+                webSocketManager?.onStatusChanged = { status ->
+                    DubbingSessionRepository.setConnectionStatus(status)
+                }
 
-            // Dynamic observation for target language changes during dubbing
-            settingsObservationJob?.cancel()
-            settingsObservationJob = serviceScope.launch {
-                var firstEmit = true
-                repository.targetLangFlow.collect { newLang ->
-                    if (firstEmit) {
-                        firstEmit = false
-                    } else {
-                        val currentKey = repository.apiKeyFlow.first()
-                        val currentVoice = repository.voicePersonaFlow.first()
-                        val currentMode = repository.dubbingModeFlow.first()
-                        webSocketManager?.disconnect()
-                        webSocketManager?.connect(
-                            apiKey = currentKey,
-                            sourceLang = "",
-                            targetLang = newLang,
-                            voicePersona = currentVoice,
-                            dubbingMode = currentMode
-                        )
+                webSocketManager?.onTextMessageReceived = { textDelta ->
+                    DubbingSessionRepository.appendSubtitleText(textDelta)
+                }
+
+                webSocketManager?.onTurnComplete = {
+                    DubbingSessionRepository.onTurnComplete()
+                }
+
+                webSocketManager?.onBinaryMessageReceived = { audioChunk ->
+                    if (dubbingMode != UserPreferencesRepository.MODE_SUBTITLE_ONLY) {
+                        audioPlayerManager?.playAudioData(audioChunk)
                     }
                 }
-            }
 
-            audioCaptureManager = AudioCaptureManager()
-            val appUid = applicationInfo.uid
+                webSocketManager?.connect(
+                    apiKey = apiKey,
+                    sourceLang = "",
+                    targetLang = targetLang,
+                    voicePersona = voicePersona,
+                    dubbingMode = dubbingMode
+                )
 
-            mediaProjection?.let { projection ->
-                audioCaptureManager?.startCapture(projection, appUid) { pcmData ->
-                    webSocketManager?.sendAudioData(pcmData)
-
-                    // Process RMS and smoothed amplitude via decoupled AudioUtils
-                    val currentAmp = DubbingSessionRepository.audioAmplitude.value
-                    val newAmp = AudioUtils.processPcmAmplitude(pcmData, currentAmp)
-                    DubbingSessionRepository.setAudioAmplitude(newAmp)
+                // Dynamic observation for target language changes during dubbing
+                settingsObservationJob?.cancel()
+                settingsObservationJob = serviceScope.launch {
+                    try {
+                        var firstEmit = true
+                        repository.targetLangFlow.collect { newLang ->
+                            if (firstEmit) {
+                                firstEmit = false
+                            } else {
+                                val currentKey = repository.apiKeyFlow.first()
+                                val currentVoice = repository.voicePersonaFlow.first()
+                                val currentMode = repository.dubbingModeFlow.first()
+                                webSocketManager?.disconnect()
+                                webSocketManager?.connect(
+                                    apiKey = currentKey,
+                                    sourceLang = "",
+                                    targetLang = newLang,
+                                    voicePersona = currentVoice,
+                                    dubbingMode = currentMode
+                                )
+                            }
+                        }
+                    } catch (e: Exception) {
+                        Log.e(TAG, "Error in settings observation flow", e)
+                    }
                 }
+
+                audioCaptureManager = AudioCaptureManager()
+                val appUid = applicationInfo.uid
+
+                mediaProjection?.let { projection ->
+                    audioCaptureManager?.startCapture(projection, appUid) { pcmData ->
+                        webSocketManager?.sendAudioData(pcmData)
+
+                        // Process RMS and smoothed amplitude via decoupled AudioUtils
+                        val currentAmp = DubbingSessionRepository.audioAmplitude.value
+                        val newAmp = AudioUtils.processPcmAmplitude(pcmData, currentAmp)
+                        DubbingSessionRepository.setAudioAmplitude(newAmp)
+                    }
+                }
+            } catch (e: Exception) {
+                Log.e(TAG, "Error during dubbing session startup", e)
+                DubbingSessionRepository.setConnectionStatus("Error: ${e.message}")
             }
         }
     }

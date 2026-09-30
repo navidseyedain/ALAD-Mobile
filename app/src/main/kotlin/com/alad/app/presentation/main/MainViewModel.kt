@@ -5,12 +5,18 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import com.alad.app.data.repository.DubbingSessionRepository
 import com.alad.app.data.repository.UserPreferencesRepository
+import android.util.Log
+import kotlinx.coroutines.CoroutineExceptionHandler
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
 class MainViewModel(private val repository: UserPreferencesRepository) : ViewModel() {
+
+    private val exceptionHandler = CoroutineExceptionHandler { _, throwable ->
+        Log.e("MainViewModel", "Unhandled coroutine error", throwable)
+    }
 
     // Decoupled session state observed from DubbingSessionRepository
     val isConnected: StateFlow<Boolean> = DubbingSessionRepository.isDubbingRunning
@@ -31,19 +37,43 @@ class MainViewModel(private val repository: UserPreferencesRepository) : ViewMod
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), "Puck")
 
     fun updateSourceLang(lang: String) {
-        viewModelScope.launch { repository.updateSourceLang(lang) }
+        viewModelScope.launch(exceptionHandler) {
+            try {
+                repository.updateSourceLang(lang)
+            } catch (e: Exception) {
+                Log.e("MainViewModel", "Failed to update source language", e)
+            }
+        }
     }
 
     fun updateTargetLang(lang: String) {
-        viewModelScope.launch { repository.updateTargetLang(lang) }
+        viewModelScope.launch(exceptionHandler) {
+            try {
+                repository.updateTargetLang(lang)
+            } catch (e: Exception) {
+                Log.e("MainViewModel", "Failed to update target language", e)
+            }
+        }
     }
 
     fun updateDubbingMode(mode: String) {
-        viewModelScope.launch { repository.updateDubbingMode(mode) }
+        viewModelScope.launch(exceptionHandler) {
+            try {
+                repository.updateDubbingMode(mode)
+            } catch (e: Exception) {
+                Log.e("MainViewModel", "Failed to update dubbing mode", e)
+            }
+        }
     }
 
     fun updateVoicePersona(voice: String) {
-        viewModelScope.launch { repository.updateVoicePersona(voice) }
+        viewModelScope.launch(exceptionHandler) {
+            try {
+                repository.updateVoicePersona(voice)
+            } catch (e: Exception) {
+                Log.e("MainViewModel", "Failed to update voice persona", e)
+            }
+        }
     }
 
     fun updateStatus(status: String) {

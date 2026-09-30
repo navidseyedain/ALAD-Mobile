@@ -37,7 +37,7 @@ import kotlinx.coroutines.launch
 fun SettingsScreen(viewModel: SettingsViewModel, onBack: () -> Unit = {}) {
     val context = LocalContext.current
     val uriHandler = LocalUriHandler.current
-    val apiKey by viewModel.apiKey.collectAsState()
+    val apiKey by viewModel.userApiKey.collectAsState()
     val selectedVoice by viewModel.voicePersona.collectAsState()
     val selectedMode by viewModel.dubbingMode.collectAsState()
 
@@ -477,7 +477,11 @@ fun SettingsScreen(viewModel: SettingsViewModel, onBack: () -> Unit = {}) {
                                 viewModel.saveSettings()
                                 val savedMessage = context.getString(R.string.settings_saved)
                                 scope.launch {
-                                    snackbarHostState.showSnackbar(savedMessage)
+                                    try {
+                                        snackbarHostState.showSnackbar(savedMessage)
+                                    } catch (e: Exception) {
+                                        android.util.Log.e("SettingsScreen", "Failed to display snackbar", e)
+                                    }
                                 }
                             }
                         ),
