@@ -152,6 +152,10 @@ class AudioDubbingForegroundService : Service() {
                 DubbingSessionRepository.appendSubtitleText(textDelta)
             }
 
+            webSocketManager?.onTurnComplete = {
+                DubbingSessionRepository.onTurnComplete()
+            }
+
             webSocketManager?.onBinaryMessageReceived = { audioChunk ->
                 if (dubbingMode != UserPreferencesRepository.MODE_SUBTITLE_ONLY) {
                     audioPlayerManager?.playAudioData(audioChunk)

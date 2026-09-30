@@ -5,6 +5,7 @@ import android.content.Intent
 import android.graphics.PixelFormat
 import android.os.Build
 import android.view.Gravity
+import android.view.View
 import android.view.WindowManager
 import androidx.compose.animation.*
 import androidx.compose.animation.core.*
@@ -100,7 +101,7 @@ class OverlayWidgetService : LifecycleService() {
             WindowManager.LayoutParams.WRAP_CONTENT,
             WindowManager.LayoutParams.WRAP_CONTENT,
             layoutFlag,
-            WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE,
+            WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE,
             PixelFormat.TRANSLUCENT
         ).apply {
             gravity = Gravity.BOTTOM or Gravity.CENTER_HORIZONTAL
@@ -146,6 +147,7 @@ class OverlayWidgetService : LifecycleService() {
         // Setup Subtitle ComposeView
         subtitleComposeView = ComposeView(this).apply {
             setViewCompositionStrategy(ViewCompositionStrategy.DisposeOnViewTreeLifecycleDestroyed)
+            visibility = View.GONE
             setContent {
                 ALADTheme {
                     FloatingCinemaSubtitles(
@@ -167,10 +169,16 @@ class OverlayWidgetService : LifecycleService() {
         subtitleComposeView.setViewTreeSavedStateRegistryOwner(savedStateRegistryOwner)
         subtitleComposeView.setViewTreeViewModelStoreOwner(viewModelStoreOwner)
 
-        // Attach controller to WindowManager
+        // Attach controller and subtitle view to WindowManager
         windowManager.addView(controllerComposeView, controllerParams)
+        try {
+            windowManager.addView(subtitleComposeView, subtitleParams)
+            isSubtitleViewAttached = true
+        } catch (e: Exception) {
+            android.util.Log.e("OverlayWidgetService", "Error initially attaching subtitle view", e)
+        }
 
-        // Dynamically attach/detach subtitle window based on session state
+        // Dynamically toggle subtitle visibility and touchability based on session state
         lifecycleScope.launch {
             combine(
                 DubbingSessionRepository.isDubbingRunning,
@@ -178,19 +186,19 @@ class OverlayWidgetService : LifecycleService() {
             ) { isRunning, isVisible ->
                 isRunning && isVisible
             }.collect { shouldShowSubtitles ->
-                if (shouldShowSubtitles && !isSubtitleViewAttached) {
-                    try {
-                        windowManager.addView(subtitleComposeView, subtitleParams)
-                        isSubtitleViewAttached = true
-                    } catch (e: Exception) {
-                        android.util.Log.e("OverlayWidgetService", "Error attaching subtitle view", e)
+                if (!isSubtitleViewAttached) return@collect
+                subtitleParams?.let { params ->
+                    if (shouldShowSubtitles) {
+                        params.flags = WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE
+                        subtitleComposeView.visibility = View.VISIBLE
+                    } else {
+                        params.flags = WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE
+                        subtitleComposeView.visibility = View.GONE
                     }
-                } else if (!shouldShowSubtitles && isSubtitleViewAttached) {
                     try {
-                        windowManager.removeView(subtitleComposeView)
-                        isSubtitleViewAttached = false
+                        windowManager.updateViewLayout(subtitleComposeView, params)
                     } catch (e: Exception) {
-                        android.util.Log.e("OverlayWidgetService", "Error detaching subtitle view", e)
+                        android.util.Log.e("OverlayWidgetService", "Error updating subtitle layout", e)
                     }
                 }
             }

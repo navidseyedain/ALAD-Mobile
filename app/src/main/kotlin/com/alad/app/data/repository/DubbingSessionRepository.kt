@@ -1,5 +1,11 @@
 package com.alad.app.data.repository
 
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -9,6 +15,10 @@ import kotlinx.coroutines.flow.asStateFlow
  * Decouples the Android Service lifecycle from UI components (MainScreen, OverlayWidget).
  */
 object DubbingSessionRepository {
+
+    private val repositoryScope = CoroutineScope(Dispatchers.Main + SupervisorJob())
+    private var silenceJob: Job? = null
+    private var isNewTurn = true
 
     private val _isDubbingRunning = MutableStateFlow(false)
     val isDubbingRunning: StateFlow<Boolean> = _isDubbingRunning.asStateFlow()
@@ -30,7 +40,7 @@ object DubbingSessionRepository {
         if (!running) {
             _audioAmplitude.value = 0f
             _connectionStatus.value = "Disconnected"
-            _liveSubtitleText.value = ""
+            clearSubtitle()
         }
     }
 
@@ -46,13 +56,22 @@ object DubbingSessionRepository {
         val trimmed = textChunk.trim()
         if (trimmed.isEmpty()) return
 
+        // Speech is actively arriving; cancel any pending silence clearance
+        silenceJob?.cancel()
+
+        if (isNewTurn) {
+            isNewTurn = false
+            _liveSubtitleText.value = trimmed
+            return
+        }
+
         val current = _liveSubtitleText.value
         val updated = if (current.isEmpty()) {
             trimmed
         } else if (trimmed.startsWith(current, ignoreCase = true)) {
             // Cumulative transcript update from model turn
             trimmed
-        } else if (current.endsWith(trimmed, ignoreCase = true)) {
+        } else if (current.startsWith(trimmed, ignoreCase = true) || current.endsWith(trimmed, ignoreCase = true)) {
             // Duplicate emission skip
             current
         } else {
@@ -73,22 +92,42 @@ object DubbingSessionRepository {
         }
     }
 
+    fun onTurnComplete() {
+        isNewTurn = true
+        // Keep the translated phrase visible for 4.5 seconds after turn finishes, then clear if silence continues
+        silenceJob?.cancel()
+        silenceJob = repositoryScope.launch {
+            delay(4500)
+            _liveSubtitleText.value = ""
+        }
+    }
+
     fun clearSubtitle() {
+        silenceJob?.cancel()
         _liveSubtitleText.value = ""
+        isNewTurn = true
     }
 
     fun toggleSubtitleOverlayVisibility() {
-        _isSubtitleOverlayVisible.value = !_isSubtitleOverlayVisible.value
+        val newVisibility = !_isSubtitleOverlayVisible.value
+        _isSubtitleOverlayVisible.value = newVisibility
+        if (newVisibility) {
+            // Clear any stale text immediately so waiting animation displays until fresh translation arrives
+            clearSubtitle()
+        }
     }
 
     fun setSubtitleOverlayVisibility(visible: Boolean) {
         _isSubtitleOverlayVisible.value = visible
+        if (visible) {
+            clearSubtitle()
+        }
     }
 
     fun resetSession() {
         _isDubbingRunning.value = false
         _audioAmplitude.value = 0f
         _connectionStatus.value = "Disconnected"
-        _liveSubtitleText.value = ""
+        clearSubtitle()
     }
 }

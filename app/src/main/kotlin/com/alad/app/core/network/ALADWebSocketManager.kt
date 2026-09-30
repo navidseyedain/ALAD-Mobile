@@ -11,6 +11,7 @@ class ALADWebSocketManager(private val client: OkHttpClient) {
     private var webSocket: WebSocket? = null
     var onBinaryMessageReceived: ((ByteArray) -> Unit)? = null
     var onTextMessageReceived: ((String) -> Unit)? = null
+    var onTurnComplete: (() -> Unit)? = null
     var onStatusChanged: ((String) -> Unit)? = null
 
     companion object {
@@ -93,6 +94,14 @@ class ALADWebSocketManager(private val client: OkHttpClient) {
                                         onBinaryMessageReceived?.invoke(audioBytes)
                                     }
                                 }
+                            }
+
+                            // 4. Check for turn completion
+                            val turnComplete = serverContent.optBoolean("turnComplete", false)
+                                || serverContent.optBoolean("turn_complete", false)
+                            if (turnComplete) {
+                                Log.d(TAG, "Turn complete from Gemini Live API")
+                                onTurnComplete?.invoke()
                             }
                         }
                     } else if (json.has("setupComplete") || json.has("setup_complete")) {
