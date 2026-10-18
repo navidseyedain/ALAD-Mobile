@@ -16,7 +16,6 @@
         android:roundIcon="@mipmap/ic_launcher_round"
         android:allowBackup="true"
         android:supportsRtl="true"
-        android:usesCleartextTraffic="true"
         android:theme="@android:style/Theme.DeviceDefault.NoActionBar"
         tools:targetApi="31">
         <activity
