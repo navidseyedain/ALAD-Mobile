@@ -24,7 +24,7 @@
   No subscriptions. No third-party accounts. 100% free and open-source.
 </p>
 
-<a href="https://github.com/navidseyedain/ALAD-Mobile/releases/latest"><img src="https://img.shields.io/badge/Download_APK-v1.3.0_Release-FF5722?style=for-the-badge&logo=android&logoColor=white" alt="Download APK" /></a>
+<a href="https://github.com/navidseyedain/ALAD-Mobile/releases/latest"><img src="https://img.shields.io/badge/Download_APK-v1.2.0_Release-FF5722?style=for-the-badge&logo=android&logoColor=white" alt="Download APK" /></a>
 
 <br/>
 
@@ -102,9 +102,9 @@ Unlike traditional subtitle apps or delayed translators, ALAD delivers **zero-la
 
 ---
 
-## 🌟 What's New in v1.3.0
+## 🌟 What's New in v1.2.0
 
-The **v1.3.0 release** represents a massive leap forward in audio fidelity, customizability, and visual refinement:
+The **v1.2.0 release** represents a massive leap forward in audio fidelity, customizability, and visual refinement:
 
 | Feature | Description |
 |---|---|
@@ -182,7 +182,7 @@ The **v1.3.0 release** represents a massive leap forward in audio fidelity, cust
 
 ### Quick Installation
 1. Go to the [Releases](https://github.com/navidseyedain/ALAD-Mobile/releases/latest) page.
-2. Download **`ALAD-v1.3.0.apk`**.
+2. Download **`ALAD-v1.2.0.apk`**.
 3. Install the APK on your device.
 4. Open the app, tap ⚙️ **Settings**, paste your **Gemini API Key**, and choose your favorite **Voice Persona**.
 5. Select your target language and dialect on the main screen, tap **Start Dubbing**, and enjoy!
@@ -276,13 +276,13 @@ flowchart TD
 
 - [x] **v1.0.0:** Initial public release (Gemini Live integration & 78 languages)
 - [x] **v1.1.0:** Glassmorphism redesign, Haptic feedback, Double-tap widget controls
-- [x] **v1.2.0:** AI Voice Persona selector & Live Subtitle floating overlay
-- [x] **v1.3.0:** Dual Audio Mixer with independent volume sliders & mute toggles
-- [x] **v1.3.0:** Regional Dialects & Accents support (Arabic, Spanish, English, Persian)
-- [x] **v1.3.0:** Dual Live Subtitles (Simultaneous Source Speech + Translated Subtitles)
-- [x] **v1.3.0:** Zero-Interruption architecture & liquid glass visual polish
-- [ ] **v1.4.0:** Automatic source language detection
-- [ ] **v1.5.0:** Bluetooth headset microphone input support
+- [x] **v1.2.0:** Dual Audio Mixer with independent volume sliders & mute toggles
+- [x] **v1.2.0:** 5 AI Voice Personas with real-time timbre DSP shaping
+- [x] **v1.2.0:** Regional Dialects & Accents support (Arabic, Spanish, English, Persian)
+- [x] **v1.2.0:** Dual Live Subtitles (Simultaneous Source Speech + Translated Subtitles)
+- [x] **v1.2.0:** Zero-Interruption architecture & liquid glass visual polish
+- [ ] **v1.3.0:** Automatic source language detection
+- [ ] **v1.4.0:** Bluetooth headset microphone input support
 
 ---
 
