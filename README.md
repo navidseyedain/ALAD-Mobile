@@ -91,9 +91,13 @@ Unlike traditional subtitle apps or delayed translators, ALAD delivers **zero-la
 
 ### 🎥 Live Demo Video
 
+
+
+
+
 <div align="center">
   <!-- 🎥 Video Demo: Replace the video src URL with your uploaded video asset link -->
-  <video src="https://github.com/user-attachments/assets/54efbdc7-e19f-49ac-9afd-aafa0d73650a" controls="controls" width="360" poster="docs/4.jpg">
+  <video src="https://github.com/user-attachments/assets/5c649309-53c8-4f4d-b75f-5ea110d5abfe" controls="controls" width="360" poster="docs/4.jpg">
     <p>Video demo is available above. Download the APK to experience real-time AI dubbing on your phone!</p>
   </video>
   <br/>
