@@ -278,6 +278,7 @@ ALAD-Mobile/
 | **"WebSocket connection failed"** | Invalid API Key or network timeout | Double check your API key in Settings or test your internet connection. |
 | **Dubbing stops when switching apps** | Android battery optimization killed the background service | Go to *App Info > Battery > Unrestricted*. |
 | **Specific app audio not capturing** | App restricts internal recording (DRM / Phone Calls) | Android OS blocks recording for DRM-protected content (like Netflix protected streams) and phone calls. |
+| **"App not installed" on Samsung (One UI 6+)** | Auto Blocker / Play Protect heuristic check | Temporarily turn off *Auto Blocker* under *Settings > Security and privacy*, or install APK via *My Files* app. |
 
 ---
 
@@ -285,10 +286,14 @@ ALAD-Mobile/
 
 - [x] **v1.0.0:** Initial public release (Gemini Live integration & 78 languages)
 - [x] **v1.1.0:** Complete Glassmorphism redesign, Haptic feedback, Double-tap widget controls, and state sync fixes
-- [ ] **v1.2.0:** AI Voice Persona selector (Choose between *Puck, Aoede, Charon, Fenrir, Kore*)
-- [ ] **v1.2.0:** Live Floating Transcript / Subtitle overlay
-- [ ] **v1.3.0:** Automatic source language detection
-- [ ] **v1.4.0:** Bluetooth headset microphone input support
+- [x] **v1.2.0:** AI Voice Persona selector (Choose between *Puck, Aoede, Charon, Fenrir, Kore*)
+- [x] **v1.2.0:** Live Floating Transcript / Subtitle overlay
+- [x] **v1.3.0:** Dual Audio Mixer with independent volume sliders and mute controls for AI voice vs. media audio
+- [x] **v1.3.0:** Regional Dialects & Accents support (Egyptian, Gulf, Levantine Arabic; US/UK English; Latin Spanish; Dari/Standard Persian)
+- [x] **v1.3.0:** Dual Live Subtitles (Simultaneous Source Speech + Translated Subtitles)
+- [x] **v1.3.0:** Ultra-low latency audio pipeline (40ms chunks + Android low-latency audio track)
+- [ ] **v1.4.0:** Automatic source language detection
+- [ ] **v1.5.0:** Bluetooth headset microphone input support
 
 ---
 
