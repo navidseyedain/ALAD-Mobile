@@ -58,7 +58,7 @@ val supportedDialects: Map<String, List<DialectOption>> = mapOf(
         DialectOption("es-AR", "🇦🇷 Argentine (Rioplatense)", "Speak in Argentine Rioplatense Spanish with voseo")
     ),
     "fa" to listOf(
-        DialectOption("fa-IR", "🇮🇷 Standard Persian (تهرانی / معیار)", "Speak in standard, natural conversational Iranian Persian (Tehran standard)"),
+        DialectOption("fa-IR", "🇮🇷 Standard Persian (تهرانی معیار)", "Speak in standard, natural conversational Iranian Persian (Tehran standard)"),
         DialectOption("fa-AF", "🇦🇫 Dari (دری افغانستان)", "Speak in authentic Dari Persian dialect (Afghan Persian)"),
         DialectOption("tg-TJ", "🇹🇯 Tajiki (تاجیکی)", "Speak in Tajiki Persian phrasing")
     ),

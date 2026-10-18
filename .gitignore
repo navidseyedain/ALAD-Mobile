@@ -14,3 +14,4 @@ app/build/
 *.keystore
 app/release/
 docs/old/
+*.apk
