@@ -3,8 +3,11 @@ package com.alad.app.presentation.main
 import android.content.Intent
 import android.net.Uri
 import android.provider.Settings
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.*
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
@@ -14,28 +17,27 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Info
-import androidx.compose.material.icons.filled.PlayArrow
-import androidx.compose.material.icons.filled.Settings
-import androidx.compose.material.icons.filled.Stop
+import androidx.compose.material.icons.automirrored.filled.VolumeUp
+import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
-import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.geometry.CornerRadius
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -58,10 +60,22 @@ fun MainScreen(
     val isConnected by viewModel.isConnected.collectAsState()
     val amplitude by viewModel.audioAmplitude.collectAsState()
     val liveSubtitleText by viewModel.liveSubtitleText.collectAsState()
+    val liveSourceSubtitleText by viewModel.liveSourceSubtitleText.collectAsState()
+    val showDualSubtitles by viewModel.showDualSubtitles.collectAsState()
     val selectedVoice by viewModel.voicePersona.collectAsState()
     val selectedMode by viewModel.dubbingMode.collectAsState()
+    val targetLang by viewModel.targetLang.collectAsState()
+    val targetDialect by viewModel.targetDialect.collectAsState()
+
+    val dubbingVol by viewModel.dubbingVolume.collectAsState()
+    val isDubbingMuted by viewModel.isDubbingMuted.collectAsState()
+    val originalVol by viewModel.originalVolumeRatio.collectAsState()
+    val isOriginalMuted by viewModel.isOriginalMuted.collectAsState()
+
     val context = LocalContext.current
+    val haptic = LocalHapticFeedback.current
     var showHelpDialog by remember { mutableStateOf(false) }
+    val scrollState = rememberScrollState()
 
     if (showHelpDialog) {
         Dialog(onDismissRequest = { showHelpDialog = false }) {
@@ -188,7 +202,7 @@ fun MainScreen(
                                 letterSpacing = 1.sp
                             )
                             Text(
-                                text = "Live Audio Dubbing",
+                                text = "AI Live Audio Dubbing",
                                 color = NeonCyan.copy(alpha = 0.85f),
                                 fontSize = 11.sp,
                                 fontWeight = FontWeight.Medium
@@ -221,12 +235,13 @@ fun MainScreen(
                 modifier = Modifier
                     .fillMaxSize()
                     .padding(paddingValues)
-                    .padding(horizontal = 20.dp, vertical = 12.dp),
+                    .verticalScroll(scrollState)
+                    .padding(horizontal = 20.dp, vertical = 8.dp),
                 horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.SpaceBetween
+                verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
 
-                // Status Indicator - Real-time Reactive
+                // 1. Status Indicator
                 val statusText = if (isConnected) {
                     stringResource(R.string.status_connected)
                 } else {
@@ -239,28 +254,26 @@ fun MainScreen(
                     modifier = Modifier.fillMaxWidth()
                 )
 
-                // Neon Audio Waveform Visualizer
+                // 2. Animated Audio Waveform
                 AnimatedWaveform(
                     isConnected = isConnected,
                     amplitude = amplitude,
-                    modifier = Modifier.padding(vertical = 8.dp)
+                    modifier = Modifier.padding(vertical = 4.dp)
                 )
 
-                // Live Subtitle Transcript Banner (Issue #4)
-                androidx.compose.animation.AnimatedVisibility(
-                    visible = isConnected && liveSubtitleText.isNotEmpty(),
-                    enter = androidx.compose.animation.fadeIn() + androidx.compose.animation.expandVertically(),
-                    exit = androidx.compose.animation.fadeOut() + androidx.compose.animation.shrinkVertically()
+                // 3. Live Dual Subtitles Banner
+                AnimatedVisibility(
+                    visible = isConnected && (liveSubtitleText.isNotEmpty() || (showDualSubtitles && liveSourceSubtitleText.isNotEmpty())),
+                    enter = fadeIn(),
+                    exit = fadeOut()
                 ) {
                     GlassCard(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(vertical = 4.dp),
-                        shape = RoundedCornerShape(18.dp),
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(20.dp),
                         borderColor = NeonCyan,
                         borderAlpha = 0.35f
                     ) {
-                        Column(modifier = Modifier.padding(14.dp)) {
+                        Column(modifier = Modifier.padding(16.dp)) {
                             Row(
                                 modifier = Modifier.fillMaxWidth(),
                                 verticalAlignment = Alignment.CenterVertically,
@@ -289,31 +302,49 @@ fun MainScreen(
                                     fontSize = 11.sp
                                 )
                             }
-                            Spacer(modifier = Modifier.height(6.dp))
-                            Text(
-                                text = liveSubtitleText,
-                                color = Color.White,
-                                fontSize = 14.sp,
-                                lineHeight = 20.sp,
-                                fontWeight = FontWeight.Medium
-                            )
+
+                            Spacer(modifier = Modifier.height(8.dp))
+
+                            if (showDualSubtitles && liveSourceSubtitleText.isNotEmpty()) {
+                                Text(
+                                    text = liveSourceSubtitleText,
+                                    color = TextSecondary,
+                                    fontSize = 13.sp,
+                                    lineHeight = 18.sp,
+                                    fontWeight = FontWeight.Normal
+                                )
+                                Spacer(modifier = Modifier.height(4.dp))
+                            }
+
+                            if (liveSubtitleText.isNotEmpty()) {
+                                Text(
+                                    text = liveSubtitleText,
+                                    color = Color.White,
+                                    fontSize = 15.sp,
+                                    lineHeight = 22.sp,
+                                    fontWeight = FontWeight.SemiBold
+                                )
+                            }
                         }
                     }
                 }
 
-                // Language Selection Card
-                val targetLang by viewModel.targetLang.collectAsState()
-                var expanded by remember { mutableStateOf(false) }
+                // 4. Target Language & Dialect Selection Bento Card
+                var langExpanded by remember { mutableStateOf(false) }
+                var dialectExpanded by remember { mutableStateOf(false) }
                 var searchQuery by remember { mutableStateOf("") }
                 val displayLang = supportedLanguages.find { it.first == targetLang }?.second ?: targetLang
+
+                val availableDialects = supportedDialects[targetLang.split("-")[0]] ?: emptyList()
+                val displayDialect = availableDialects.find { it.code.equals(targetDialect, ignoreCase = true) }?.displayName
+                    ?: stringResource(R.string.standard_dialect)
 
                 GlassCard(
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(22.dp)
                 ) {
                     Column(
-                        modifier = Modifier.padding(18.dp),
-                        horizontalAlignment = Alignment.CenterHorizontally
+                        modifier = Modifier.padding(18.dp)
                     ) {
                         Row(
                             modifier = Modifier.fillMaxWidth(),
@@ -344,16 +375,17 @@ fun MainScreen(
 
                         Spacer(modifier = Modifier.height(12.dp))
 
+                        // Language Dropdown
                         ExposedDropdownMenuBox(
-                            expanded = expanded,
-                            onExpandedChange = { expanded = it }
+                            expanded = langExpanded,
+                            onExpandedChange = { langExpanded = it }
                         ) {
                             OutlinedTextField(
-                                value = if (expanded) searchQuery else displayLang,
+                                value = if (langExpanded) searchQuery else displayLang,
                                 onValueChange = { searchQuery = it },
-                                readOnly = !expanded,
+                                readOnly = !langExpanded,
                                 label = { Text(stringResource(R.string.select_language), color = TextSecondary) },
-                                trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
+                                trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = langExpanded) },
                                 shape = RoundedCornerShape(16.dp),
                                 colors = OutlinedTextFieldDefaults.colors(
                                     focusedContainerColor = Color(0x30FFFFFF),
@@ -369,9 +401,9 @@ fun MainScreen(
                             )
 
                             ExposedDropdownMenu(
-                                expanded = expanded,
+                                expanded = langExpanded,
                                 onDismissRequest = {
-                                    expanded = false
+                                    langExpanded = false
                                     searchQuery = ""
                                 },
                                 modifier = Modifier
@@ -392,23 +424,223 @@ fun MainScreen(
                                         },
                                         onClick = {
                                             viewModel.updateTargetLang(code)
-                                            expanded = false
+                                            langExpanded = false
                                             searchQuery = ""
                                         }
                                     )
                                 }
-                                if (filtered.isEmpty()) {
-                                    DropdownMenuItem(
-                                        text = { Text(stringResource(R.string.no_results_found), color = TextSecondary) },
-                                        onClick = {}
-                                    )
+                            }
+                        }
+
+                        // Dialect / Accent Selector (if dialects available for this language)
+                        if (availableDialects.isNotEmpty()) {
+                            Spacer(modifier = Modifier.height(14.dp))
+
+                            Text(
+                                text = stringResource(R.string.target_dialect),
+                                color = TextSecondary,
+                                fontSize = 12.5.sp,
+                                fontWeight = FontWeight.Medium
+                            )
+
+                            Spacer(modifier = Modifier.height(6.dp))
+
+                            ExposedDropdownMenuBox(
+                                expanded = dialectExpanded,
+                                onExpandedChange = { dialectExpanded = it }
+                            ) {
+                                OutlinedTextField(
+                                    value = displayDialect,
+                                    onValueChange = {},
+                                    readOnly = true,
+                                    label = { Text(stringResource(R.string.select_dialect), color = TextSecondary) },
+                                    trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = dialectExpanded) },
+                                    shape = RoundedCornerShape(16.dp),
+                                    colors = OutlinedTextFieldDefaults.colors(
+                                        focusedContainerColor = Color(0x25FFFFFF),
+                                        unfocusedContainerColor = Color(0x12FFFFFF),
+                                        focusedBorderColor = NeonPurple,
+                                        unfocusedBorderColor = Color.White.copy(alpha = 0.15f),
+                                        focusedTextColor = Color.White,
+                                        unfocusedTextColor = Color.White
+                                    ),
+                                    modifier = Modifier
+                                        .menuAnchor()
+                                        .fillMaxWidth()
+                                )
+
+                                ExposedDropdownMenu(
+                                    expanded = dialectExpanded,
+                                    onDismissRequest = { dialectExpanded = false },
+                                    modifier = Modifier
+                                        .background(Color(0xFF131D31))
+                                        .border(1.dp, Color.White.copy(alpha = 0.15f), RoundedCornerShape(12.dp))
+                                ) {
+                                    availableDialects.forEach { dialect ->
+                                        DropdownMenuItem(
+                                            text = {
+                                                Text(
+                                                    dialect.displayName,
+                                                    color = if (dialect.code == targetDialect) NeonPurple else Color.White,
+                                                    fontWeight = if (dialect.code == targetDialect) FontWeight.Bold else FontWeight.Normal
+                                                )
+                                            },
+                                            onClick = {
+                                                viewModel.updateTargetDialect(dialect.code)
+                                                dialectExpanded = false
+                                            }
+                                        )
+                                    }
                                 }
                             }
                         }
                     }
                 }
 
-                // Floating Widget Toggle Card
+                // 5. Dual Audio Mixer Bento Card (Issue #6)
+                GlassCard(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(22.dp),
+                    borderColor = NeonCyan,
+                    borderAlpha = 0.20f
+                ) {
+                    Column(
+                        modifier = Modifier.padding(18.dp)
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Tune,
+                                contentDescription = null,
+                                tint = NeonCyan,
+                                modifier = Modifier.size(20.dp)
+                            )
+                            Spacer(modifier = Modifier.width(10.dp))
+                            Text(
+                                text = stringResource(R.string.audio_mixer),
+                                color = Color.White,
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 15.sp
+                            )
+                        }
+
+                        Spacer(modifier = Modifier.height(14.dp))
+
+                        // A. Dubbed AI Voice Volume Slider + Mute
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Text(
+                                text = stringResource(R.string.dubbed_voice_volume),
+                                color = if (isDubbingMuted) TextMuted else TextSecondary,
+                                fontSize = 13.sp,
+                                fontWeight = FontWeight.Medium
+                            )
+
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Text(
+                                    text = if (isDubbingMuted) "MUTED" else "${(dubbingVol * 100).toInt()}%",
+                                    color = if (isDubbingMuted) NeonCoral else NeonCyan,
+                                    fontSize = 12.sp,
+                                    fontWeight = FontWeight.Bold
+                                )
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Box(
+                                    modifier = Modifier
+                                        .size(28.dp)
+                                        .clip(CircleShape)
+                                        .background(if (isDubbingMuted) NeonCoral.copy(alpha = 0.25f) else Color.White.copy(alpha = 0.08f))
+                                        .clickable {
+                                            haptic.performHapticFeedback(androidx.compose.ui.hapticfeedback.HapticFeedbackType.TextHandleMove)
+                                            viewModel.toggleDubbingMute()
+                                        },
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Icon(
+                                        imageVector = if (isDubbingMuted) Icons.Default.VolumeOff else Icons.Default.VolumeUp,
+                                        contentDescription = "Mute Dubbing",
+                                        tint = if (isDubbingMuted) NeonCoral else Color.White,
+                                        modifier = Modifier.size(15.dp)
+                                    )
+                                }
+                            }
+                        }
+
+                        Slider(
+                            value = dubbingVol,
+                            onValueChange = { viewModel.setDubbingVolume(it) },
+                            valueRange = 0f..1f,
+                            colors = SliderDefaults.colors(
+                                thumbColor = NeonCyan,
+                                activeTrackColor = NeonCyan,
+                                inactiveTrackColor = Color.White.copy(alpha = 0.15f)
+                            ),
+                            modifier = Modifier.fillMaxWidth()
+                        )
+
+                        Spacer(modifier = Modifier.height(8.dp))
+
+                        // B. Original Media Audio Volume Slider + Mute
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Text(
+                                text = stringResource(R.string.original_media_volume),
+                                color = if (isOriginalMuted) TextMuted else TextSecondary,
+                                fontSize = 13.sp,
+                                fontWeight = FontWeight.Medium
+                            )
+
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Text(
+                                    text = if (isOriginalMuted) "MUTED" else "${(originalVol * 100).toInt()}%",
+                                    color = if (isOriginalMuted) NeonCoral else NeonPurple,
+                                    fontSize = 12.sp,
+                                    fontWeight = FontWeight.Bold
+                                )
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Box(
+                                    modifier = Modifier
+                                        .size(28.dp)
+                                        .clip(CircleShape)
+                                        .background(if (isOriginalMuted) NeonCoral.copy(alpha = 0.25f) else Color.White.copy(alpha = 0.08f))
+                                        .clickable {
+                                            haptic.performHapticFeedback(androidx.compose.ui.hapticfeedback.HapticFeedbackType.TextHandleMove)
+                                            viewModel.toggleOriginalMute()
+                                        },
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Icon(
+                                        imageVector = if (isOriginalMuted) Icons.Default.VolumeOff else Icons.AutoMirrored.Filled.VolumeUp,
+                                        contentDescription = "Mute Original Audio",
+                                        tint = if (isOriginalMuted) NeonCoral else Color.White,
+                                        modifier = Modifier.size(15.dp)
+                                    )
+                                }
+                            }
+                        }
+
+                        Slider(
+                            value = originalVol,
+                            onValueChange = { viewModel.setOriginalVolumeRatio(it) },
+                            valueRange = 0f..1f,
+                            colors = SliderDefaults.colors(
+                                thumbColor = NeonPurple,
+                                activeTrackColor = NeonPurple,
+                                inactiveTrackColor = Color.White.copy(alpha = 0.15f)
+                            ),
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                    }
+                }
+
+                // 6. Floating Overlay Widget Switch Card
                 val isWidgetActive by com.alad.app.core.service.OverlayWidgetService.isWidgetActive.collectAsState()
                 GlassCard(
                     modifier = Modifier.fillMaxWidth(),
@@ -469,7 +701,7 @@ fun MainScreen(
                     }
                 }
 
-                // Futuristic 3D Glass-Neon Action Button
+                // 7. Start/Stop Dubbing Action Button
                 StartStopDubbingButton(
                     isConnected = isConnected,
                     onClick = {
@@ -480,6 +712,8 @@ fun MainScreen(
                         }
                     }
                 )
+
+                Spacer(modifier = Modifier.height(16.dp))
             }
         }
     }
@@ -514,7 +748,7 @@ fun AnimatedWaveform(
     Box(
         modifier = modifier
             .fillMaxWidth()
-            .height(130.dp),
+            .height(115.dp),
         contentAlignment = Alignment.Center
     ) {
         Canvas(modifier = Modifier.fillMaxSize()) {
@@ -582,7 +816,7 @@ fun StartStopDubbingButton(
 ) {
     val interactionSource = remember { MutableInteractionSource() }
     val isPressed by interactionSource.collectIsPressedAsState()
-    val haptic = androidx.compose.ui.platform.LocalHapticFeedback.current
+    val haptic = LocalHapticFeedback.current
 
     val yOffset by animateDpAsState(
         targetValue = if (isPressed) 4.dp else 0.dp,
@@ -607,7 +841,7 @@ fun StartStopDubbingButton(
     Box(
         modifier = Modifier
             .fillMaxWidth()
-            .height(76.dp)
+            .height(72.dp)
             .scale(scale)
             .clickable(
                 interactionSource = interactionSource,

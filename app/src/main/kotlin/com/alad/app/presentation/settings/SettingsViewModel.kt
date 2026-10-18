@@ -23,19 +23,27 @@ class SettingsViewModel(private val repository: UserPreferencesRepository) : Vie
     private val _volumeRatio = MutableStateFlow(1.0f)
     val volumeRatio: StateFlow<Float> = _volumeRatio.asStateFlow()
 
+    private val _originalVolume = MutableStateFlow(0.30f)
+    val originalVolume: StateFlow<Float> = _originalVolume.asStateFlow()
+
     private val _voicePersona = MutableStateFlow("Puck")
     val voicePersona: StateFlow<String> = _voicePersona.asStateFlow()
 
     private val _dubbingMode = MutableStateFlow(UserPreferencesRepository.MODE_HYBRID)
     val dubbingMode: StateFlow<String> = _dubbingMode.asStateFlow()
 
+    private val _showDualSubtitles = MutableStateFlow(true)
+    val showDualSubtitles: StateFlow<Boolean> = _showDualSubtitles.asStateFlow()
+
     init {
         viewModelScope.launch(exceptionHandler) {
             try {
                 _userApiKey.value = repository.apiKeyFlow.first()
                 _volumeRatio.value = repository.volumeRatioFlow.first()
+                _originalVolume.value = repository.originalVolumeFlow.first()
                 _voicePersona.value = repository.voicePersonaFlow.first()
                 _dubbingMode.value = repository.dubbingModeFlow.first()
+                _showDualSubtitles.value = repository.showDualSubtitlesFlow.first()
             } catch (e: Exception) {
                 Log.e("SettingsViewModel", "Failed to load preferences", e)
             }
@@ -44,16 +52,20 @@ class SettingsViewModel(private val repository: UserPreferencesRepository) : Vie
 
     fun updateApiKey(key: String) { _userApiKey.value = key }
     fun updateVolumeRatio(ratio: Float) { _volumeRatio.value = ratio }
+    fun updateOriginalVolume(volume: Float) { _originalVolume.value = volume }
     fun updateVoicePersona(voice: String) { _voicePersona.value = voice }
     fun updateDubbingMode(mode: String) { _dubbingMode.value = mode }
+    fun updateShowDualSubtitles(show: Boolean) { _showDualSubtitles.value = show }
 
     fun saveSettings() {
         viewModelScope.launch(exceptionHandler) {
             try {
                 repository.updateApiKey(_userApiKey.value)
                 repository.updateVolumeRatio(_volumeRatio.value)
+                repository.updateOriginalVolume(_originalVolume.value)
                 repository.updateVoicePersona(_voicePersona.value)
                 repository.updateDubbingMode(_dubbingMode.value)
+                repository.updateShowDualSubtitles(_showDualSubtitles.value)
             } catch (e: Exception) {
                 Log.e("SettingsViewModel", "Failed to save preferences", e)
             }

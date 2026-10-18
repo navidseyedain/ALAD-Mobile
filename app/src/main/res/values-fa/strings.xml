@@ -15,8 +15,9 @@
     <string name="btn_start">شروع دوبله</string>
     <string name="settings">تنظیمات</string>
     <string name="gemini_api_key">کلید API جمینای</string>
-    <string name="dubbing_volume">بلندی صدای دوبله: %1$d%%</string>
-    <string name="volume_description">صدای هوش مصنوعی را کنترل می‌کند. صدای پس‌زمینه (مانند ویدیو) به طور خودکار کم خواهد شد.</string>
+    <string name="dubbing_volume">صدای هوش مصنوعی: %1$d%%</string>
+    <string name="original_volume">صدای اصلی ویدیو: %1$d%%</string>
+    <string name="volume_description">میزان صدای گوینده هوش مصنوعی و صدای ویدیوی اصلی را مستقل تنظیم کنید.</string>
     <string name="save_settings">ذخیره تنظیمات</string>
     <string name="settings_saved">تنظیمات ذخیره شد</string>
     <string name="hide">مخفی</string>
@@ -24,10 +25,9 @@
     <string name="get_api_key">دریافت کلید API جمینای</string>
     <string name="api_key_guide">برای استفاده از برنامه، باید یک کلید API رایگان از Google AI Studio دریافت کنید.</string>
     <string name="help_title">راهنمای استفاده از ALAD</string>
-    <string name="help_content">۱. به تنظیمات بروید و کلید API خود را وارد کنید.\n۲. زبان مقصد را انتخاب کنید.\n۳. روی «شروع دوبله» کلیک کنید تا ترجمه همزمان آغاز شود.\n۴. از ویجت شناور برای کنترل برنامه هنگام استفاده از برنامه‌های دیگر استفاده کنید.</string>
+    <string name="help_content">۱. به تنظیمات بروید و کلید API خود را وارد کنید.\n۲. زبان و لهجه مدنظر را انتخاب کنید.\n۳. میزان صدای دوبله و صدای ویدیوی اصلی را در میکسر صدا تنظیم کنید.\n۴. روی «شروع دوبله» کلیک کنید تا ترجمه همزمان آغاز شود.\n۵. در صورت بروز خطا در نصب روی گوشی‌های سامسونگ (One UI 6+)، قابلیت Auto Blocker را موقتاً در تنظیمات امنیت گوشی خاموش کنید.</string>
     <string name="close">بستن</string>
 
-    <!-- New v1.2.0 features -->
     <string name="voice_persona">صدای گوینده هوش مصنوعی</string>
     <string name="voice_persona_desc">لحن و کاراکتر صدای گوینده جمینای را انتخاب کنید</string>
     <string name="voice_puck">پاک (Puck - پرانرژی و دوستانه)</string>
@@ -43,4 +43,16 @@
     <string name="live_subtitles">زیرنویس همزمان</string>
     <string name="subtitles_preview">رونوشت ترجمه همزمان</string>
     <string name="subtitles_waiting">در انتظار دریافت گفتار...</string>
+
+    <!-- New v1.3.0 features -->
+    <string name="audio_mixer">میکسر دوگانه صدا</string>
+    <string name="dubbed_voice_volume">صدای دوبله هوش مصنوعی</string>
+    <string name="original_media_volume">صدای اصلی ویدیو</string>
+    <string name="target_dialect">لهجه و گویش محلی</string>
+    <string name="select_dialect">انتخاب لهجه (اختیاری)</string>
+    <string name="standard_dialect">معیار / پیش‌فرض</string>
+    <string name="dual_subtitles">زیرنویس دوزبانه زنده</string>
+    <string name="dual_subtitles_desc">نمایش متن گفتار اصلی به همراه ترجمه همزمان</string>
+    <string name="mute_dubbing">بی‌صدا کردن هوش مصنوعی</string>
+    <string name="mute_original">بی‌صدا کردن صدای اصلی</string>
 </resources>

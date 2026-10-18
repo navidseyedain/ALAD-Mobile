@@ -23,6 +23,14 @@ class MainViewModel(private val repository: UserPreferencesRepository) : ViewMod
     val audioAmplitude: StateFlow<Float> = DubbingSessionRepository.audioAmplitude
     val statusMessage: StateFlow<String> = DubbingSessionRepository.connectionStatus
     val liveSubtitleText: StateFlow<String> = DubbingSessionRepository.liveSubtitleText
+    val liveSourceSubtitleText: StateFlow<String> = DubbingSessionRepository.liveSourceSubtitleText
+
+    // Audio Mixer State
+    val dubbingVolume: StateFlow<Float> = DubbingSessionRepository.dubbingVolume
+    val isDubbingMuted: StateFlow<Boolean> = DubbingSessionRepository.isDubbingMuted
+    val originalVolumeRatio: StateFlow<Float> = DubbingSessionRepository.originalVolumeRatio
+    val isOriginalMuted: StateFlow<Boolean> = DubbingSessionRepository.isOriginalMuted
+    val showDualSubtitles: StateFlow<Boolean> = DubbingSessionRepository.showDualSubtitles
 
     val sourceLang: StateFlow<String> = repository.sourceLangFlow
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), "en")
@@ -30,11 +38,63 @@ class MainViewModel(private val repository: UserPreferencesRepository) : ViewMod
     val targetLang: StateFlow<String> = repository.targetLangFlow
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), "fa")
 
+    val targetDialect: StateFlow<String> = repository.targetDialectFlow
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), "")
+
     val dubbingMode: StateFlow<String> = repository.dubbingModeFlow
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), UserPreferencesRepository.MODE_HYBRID)
 
     val voicePersona: StateFlow<String> = repository.voicePersonaFlow
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), "Puck")
+
+    init {
+        viewModelScope.launch(exceptionHandler) {
+            try {
+                // Initialize session repository with saved preferences
+                repository.volumeRatioFlow.collect { vol ->
+                    DubbingSessionRepository.setDubbingVolume(vol)
+                }
+            } catch (e: Exception) {
+                Log.e("MainViewModel", "Error reading volumeRatio", e)
+            }
+        }
+        viewModelScope.launch(exceptionHandler) {
+            try {
+                repository.isDubbingMutedFlow.collect { muted ->
+                    DubbingSessionRepository.setDubbingMuted(muted)
+                }
+            } catch (e: Exception) {
+                Log.e("MainViewModel", "Error reading isDubbingMuted", e)
+            }
+        }
+        viewModelScope.launch(exceptionHandler) {
+            try {
+                repository.originalVolumeFlow.collect { ratio ->
+                    DubbingSessionRepository.setOriginalVolumeRatio(ratio)
+                }
+            } catch (e: Exception) {
+                Log.e("MainViewModel", "Error reading originalVolume", e)
+            }
+        }
+        viewModelScope.launch(exceptionHandler) {
+            try {
+                repository.isOriginalMutedFlow.collect { muted ->
+                    DubbingSessionRepository.setOriginalMuted(muted)
+                }
+            } catch (e: Exception) {
+                Log.e("MainViewModel", "Error reading isOriginalMuted", e)
+            }
+        }
+        viewModelScope.launch(exceptionHandler) {
+            try {
+                repository.showDualSubtitlesFlow.collect { show ->
+                    DubbingSessionRepository.setShowDualSubtitles(show)
+                }
+            } catch (e: Exception) {
+                Log.e("MainViewModel", "Error reading showDualSubtitles", e)
+            }
+        }
+    }
 
     fun updateSourceLang(lang: String) {
         viewModelScope.launch(exceptionHandler) {
@@ -50,8 +110,64 @@ class MainViewModel(private val repository: UserPreferencesRepository) : ViewMod
         viewModelScope.launch(exceptionHandler) {
             try {
                 repository.updateTargetLang(lang)
+                // Clear dialect when language changes to standard
+                repository.updateTargetDialect("")
             } catch (e: Exception) {
                 Log.e("MainViewModel", "Failed to update target language", e)
+            }
+        }
+    }
+
+    fun updateTargetDialect(dialect: String) {
+        viewModelScope.launch(exceptionHandler) {
+            try {
+                repository.updateTargetDialect(dialect)
+            } catch (e: Exception) {
+                Log.e("MainViewModel", "Failed to update target dialect", e)
+            }
+        }
+    }
+
+    fun setDubbingVolume(vol: Float) {
+        DubbingSessionRepository.setDubbingVolume(vol)
+        viewModelScope.launch(exceptionHandler) {
+            try {
+                repository.updateVolumeRatio(vol)
+            } catch (e: Exception) {
+                Log.e("MainViewModel", "Failed to save dubbing volume", e)
+            }
+        }
+    }
+
+    fun toggleDubbingMute() {
+        DubbingSessionRepository.toggleDubbingMute()
+        viewModelScope.launch(exceptionHandler) {
+            try {
+                repository.updateDubbingMuted(DubbingSessionRepository.isDubbingMuted.value)
+            } catch (e: Exception) {
+                Log.e("MainViewModel", "Failed to save dubbing mute", e)
+            }
+        }
+    }
+
+    fun setOriginalVolumeRatio(ratio: Float) {
+        DubbingSessionRepository.setOriginalVolumeRatio(ratio)
+        viewModelScope.launch(exceptionHandler) {
+            try {
+                repository.updateOriginalVolume(ratio)
+            } catch (e: Exception) {
+                Log.e("MainViewModel", "Failed to save original volume", e)
+            }
+        }
+    }
+
+    fun toggleOriginalMute() {
+        DubbingSessionRepository.toggleOriginalMute()
+        viewModelScope.launch(exceptionHandler) {
+            try {
+                repository.updateOriginalMuted(DubbingSessionRepository.isOriginalMuted.value)
+            } catch (e: Exception) {
+                Log.e("MainViewModel", "Failed to save original mute", e)
             }
         }
     }
