@@ -165,6 +165,7 @@ class AudioDubbingForegroundService : Service() {
                 if (dubbingMode != UserPreferencesRepository.MODE_SUBTITLE_ONLY) {
                     audioPlayerManager = AudioPlayerManager(applicationContext)
                     audioPlayerManager?.start()
+                    audioPlayerManager?.setVoicePersona(voicePersona)
                     audioPlayerManager?.setDubbingAudio(volumeRatio, isDubbingMuted)
                     audioPlayerManager?.setOriginalMediaAudio(originalVolume, isOriginalMuted)
                 }
@@ -234,6 +235,7 @@ class AudioDubbingForegroundService : Service() {
                             if (firstEmit) {
                                 firstEmit = false
                             } else {
+                                audioPlayerManager?.setVoicePersona(newVoice)
                                 val currentKey = repository.apiKeyFlow.first()
                                 val currentMode = repository.dubbingModeFlow.first()
                                 webSocketManager?.disconnect()

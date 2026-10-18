@@ -36,6 +36,9 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.res.painterResource
@@ -727,8 +730,8 @@ fun AnimatedWaveform(
     modifier: Modifier = Modifier
 ) {
     val animatedAmplitude by animateFloatAsState(
-        targetValue = if (isConnected) amplitude else 0f,
-        animationSpec = tween(50, easing = LinearEasing),
+        targetValue = if (isConnected) amplitude.coerceIn(0.04f, 1f) else 0.03f,
+        animationSpec = tween(70, easing = LinearEasing),
         label = "amplitude"
     )
 
@@ -738,13 +741,11 @@ fun AnimatedWaveform(
         initialValue = 0f,
         targetValue = 2f * Math.PI.toFloat(),
         animationSpec = infiniteRepeatable(
-            animation = tween(1800, easing = LinearEasing),
+            animation = tween(2200, easing = LinearEasing),
             repeatMode = RepeatMode.Restart
         ),
         label = "phase"
     )
-
-    val numBars = 45
 
     Box(
         modifier = modifier
@@ -753,57 +754,97 @@ fun AnimatedWaveform(
         contentAlignment = Alignment.Center
     ) {
         Canvas(modifier = Modifier.fillMaxSize()) {
-            val barWidth = size.width / (numBars * 1.5f)
-            val space = (size.width - (numBars * barWidth)) / (numBars - 1)
-            val centerY = size.height / 2
+            val width = size.width
+            val height = size.height
+            val centerY = height * 0.50f
 
-            for (i in 0 until numBars) {
-                val normalizedPos = i.toFloat() / (numBars - 1)
-                val distFromCenter = abs(normalizedPos - 0.5f)
-                val shapeFactor = exp(-14f * distFromCenter * distFromCenter).toFloat()
+            // 1. Draw glowing wave fill & wave stroke (matching Figma dashboard wave curves in reference image)
+            val wavePath = Path()
+            val fillPath = Path()
+            fillPath.moveTo(0f, height)
 
-                val baseHeight = shapeFactor * size.height * 0.92f
+            val stepCount = 55
+            val stepX = width / stepCount
 
-                val animFactor = if (isConnected) {
-                    val offsetPhase = phase + (i * 0.28f)
-                    val idleWobble = (sin(offsetPhase.toDouble()).toFloat() + 1f) / 2f * 0.18f + 0.06f
-                    idleWobble + (animatedAmplitude * 1.6f)
+            for (i in 0..stepCount) {
+                val x = i * stepX
+                val normalizedX = i.toFloat() / stepCount
+                // Bell curve windowing so wave attenuates gently near edges
+                val window = (sin(normalizedX * Math.PI).toFloat()).coerceIn(0.12f, 1f)
+
+                val wave1 = sin(phase + (normalizedX * 4.2f * Math.PI.toFloat())) * 0.65f
+                val wave2 = sin((phase * 1.4f) + (normalizedX * 6.5f * Math.PI.toFloat())) * 0.35f
+                val combinedWave = (wave1 + wave2) * window
+
+                val maxDisplacement = height * 0.36f * (0.15f + animatedAmplitude * 1.85f)
+                val y = centerY - (combinedWave * maxDisplacement).coerceIn(-height * 0.42f, height * 0.42f)
+
+                if (i == 0) {
+                    wavePath.moveTo(x, y)
+                    fillPath.lineTo(x, y)
                 } else {
-                    0.05f
+                    wavePath.lineTo(x, y)
+                    fillPath.lineTo(x, y)
                 }
+            }
 
-                val barHeight = baseHeight * animFactor.coerceIn(0f, 1.25f)
-                val maxBarHeight = maxOf(4f, barHeight)
+            fillPath.lineTo(width, height)
+            fillPath.close()
 
-                val x = i * (barWidth + space)
-                val y = centerY - (maxBarHeight / 2)
+            // Area Gradient Fill under wave
+            val fillBrush = if (isConnected) {
+                Brush.verticalGradient(
+                    colors = listOf(
+                        NeonCyan.copy(alpha = 0.32f),
+                        NeonBlue.copy(alpha = 0.12f),
+                        Color.Transparent
+                    ),
+                    startY = centerY - height * 0.4f,
+                    endY = height
+                )
+            } else {
+                Brush.verticalGradient(
+                    colors = listOf(
+                        Color.White.copy(alpha = 0.08f),
+                        Color.Transparent
+                    ),
+                    startY = centerY - height * 0.2f,
+                    endY = height
+                )
+            }
 
-                val barBrush = if (isConnected) {
-                    Brush.verticalGradient(
-                        colors = listOf(
-                            NeonCyan,
-                            NeonBlue,
-                            NeonPurple
-                        ),
-                        startY = y,
-                        endY = y + maxBarHeight
-                    )
-                } else {
-                    Brush.verticalGradient(
-                        colors = listOf(
-                            Color.White.copy(alpha = 0.25f),
-                            Color.White.copy(alpha = 0.08f)
-                        ),
-                        startY = y,
-                        endY = y + maxBarHeight
-                    )
-                }
+            drawPath(path = fillPath, brush = fillBrush)
 
-                drawRoundRect(
-                    brush = barBrush,
-                    topLeft = Offset(x, y),
-                    size = Size(barWidth, maxBarHeight),
-                    cornerRadius = CornerRadius(barWidth / 2, barWidth / 2)
+            // Glowing Wave Crest Stroke
+            val strokeBrush = if (isConnected) {
+                Brush.horizontalGradient(
+                    colors = listOf(NeonCyan, NeonBlue, NeonPurple)
+                )
+            } else {
+                Brush.horizontalGradient(
+                    colors = listOf(Color.White.copy(alpha = 0.35f), Color.White.copy(alpha = 0.12f))
+                )
+            }
+
+            drawPath(
+                path = wavePath,
+                brush = strokeBrush,
+                style = Stroke(width = if (isConnected) 3.5.dp.toPx() else 1.8.dp.toPx(), cap = StrokeCap.Round)
+            )
+
+            // Specular glow dot on active peak
+            if (isConnected) {
+                val peakX = width * 0.5f
+                val peakY = centerY - (height * 0.26f * (0.2f + animatedAmplitude * 1.5f))
+                drawCircle(
+                    color = Color.White,
+                    radius = 4.dp.toPx(),
+                    center = Offset(peakX, peakY)
+                )
+                drawCircle(
+                    color = NeonCyan.copy(alpha = 0.5f),
+                    radius = 9.dp.toPx(),
+                    center = Offset(peakX, peakY)
                 )
             }
         }
@@ -819,31 +860,39 @@ fun StartStopDubbingButton(
     val isPressed by interactionSource.collectIsPressedAsState()
     val haptic = LocalHapticFeedback.current
 
-    val yOffset by animateDpAsState(
-        targetValue = if (isPressed) 4.dp else 0.dp,
-        animationSpec = spring(stiffness = Spring.StiffnessMedium),
-        label = "press_y"
-    )
-
     val scale by animateFloatAsState(
-        targetValue = if (isPressed) 0.98f else 1.0f,
+        targetValue = if (isPressed) 0.97f else 1.0f,
         animationSpec = spring(stiffness = Spring.StiffnessMedium),
         label = "scale"
     )
 
     val gradientColors = if (isConnected) {
-        listOf(NeonRose, NeonCoral, Color(0xFFDC2626))
+        listOf(NeonRose, NeonCoral, Color(0xFFE11D48))
     } else {
         listOf(NeonCyan, NeonBlue, NeonViolet)
     }
 
-    val glowColor = if (isConnected) NeonRose else NeonCyan
-
     Box(
         modifier = Modifier
             .fillMaxWidth()
-            .height(72.dp)
+            .height(64.dp)
             .scale(scale)
+            .clip(RoundedCornerShape(32.dp))
+            .background(
+                Brush.horizontalGradient(gradientColors)
+            )
+            .border(
+                BorderStroke(
+                    1.2.dp,
+                    Brush.linearGradient(
+                        listOf(
+                            Color.White.copy(alpha = 0.70f),
+                            Color.White.copy(alpha = 0.15f)
+                        )
+                    )
+                ),
+                shape = RoundedCornerShape(32.dp)
+            )
             .clickable(
                 interactionSource = interactionSource,
                 indication = null,
@@ -854,78 +903,46 @@ fun StartStopDubbingButton(
             ),
         contentAlignment = Alignment.Center
     ) {
-        // Ambient Neon Glow behind the button
+        // Specular top highlight line inside pill
         Box(
             modifier = Modifier
-                .fillMaxSize()
-                .padding(horizontal = 8.dp)
-                .offset(y = 6.dp)
-                .clip(RoundedCornerShape(24.dp))
+                .fillMaxWidth(0.9f)
+                .height(1.dp)
+                .align(Alignment.TopCenter)
+                .padding(top = 1.dp)
                 .background(
-                    Brush.radialGradient(
-                        colors = listOf(glowColor.copy(alpha = 0.4f), Color.Transparent),
-                        radius = 280f
-                    )
-                )
-        )
-
-        // 3D Depth Base Shadow
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .offset(y = 5.dp)
-                .clip(RoundedCornerShape(22.dp))
-                .background(
-                    if (isConnected) Color(0xFF7F1D1D) else Color(0xFF1E3A8A)
-                )
-        )
-
-        // Top Face of Button
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .offset(y = yOffset)
-                .clip(RoundedCornerShape(22.dp))
-                .background(
-                    Brush.horizontalGradient(gradientColors)
-                )
-                .border(
-                    BorderStroke(
-                        1.5.dp,
-                        Brush.linearGradient(
-                            listOf(
-                                Color.White.copy(alpha = 0.6f),
-                                Color.White.copy(alpha = 0.1f)
-                            )
+                    Brush.horizontalGradient(
+                        listOf(
+                            Color.Transparent,
+                            Color.White.copy(alpha = 0.6f),
+                            Color.Transparent
                         )
-                    ),
-                    shape = RoundedCornerShape(22.dp)
-                ),
-            contentAlignment = Alignment.Center
-        ) {
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.Center
-            ) {
-                Icon(
-                    imageVector = if (isConnected) Icons.Default.Stop else Icons.Default.PlayArrow,
-                    contentDescription = null,
-                    tint = Color.White,
-                    modifier = Modifier.size(28.dp)
-                )
-
-                Spacer(modifier = Modifier.width(10.dp))
-
-                Text(
-                    text = if (isConnected) stringResource(R.string.btn_stop) else stringResource(R.string.btn_start),
-                    style = MaterialTheme.typography.titleLarge.copy(
-                        fontWeight = FontWeight.Black,
-                        color = Color.White,
-                        letterSpacing = 0.5.sp,
-                        fontSize = 19.sp
                     )
                 )
-            }
+        )
+
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.Center
+        ) {
+            Icon(
+                imageVector = if (isConnected) Icons.Default.Stop else Icons.Default.PlayArrow,
+                contentDescription = null,
+                tint = Color.White,
+                modifier = Modifier.size(26.dp)
+            )
+
+            Spacer(modifier = Modifier.width(10.dp))
+
+            Text(
+                text = if (isConnected) stringResource(R.string.btn_stop) else stringResource(R.string.btn_start),
+                style = MaterialTheme.typography.titleMedium.copy(
+                    fontWeight = FontWeight.ExtraBold,
+                    color = Color.White,
+                    letterSpacing = 0.5.sp,
+                    fontSize = 17.5.sp
+                )
+            )
         }
     }
 }

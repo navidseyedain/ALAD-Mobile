@@ -31,103 +31,59 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 
 /**
- * Full-screen ambient lighting container that renders smooth background glow orbs
- * to give realistic depth and refraction behind translucent glass cards.
+ * Full-screen smooth obsidian liquid background container without any hard-edge circular discs.
+ * Provides deep space aesthetic with pure smooth gradients.
  */
 @Composable
 fun AmbientBackground(
     modifier: Modifier = Modifier,
     content: @Composable BoxScope.() -> Unit
 ) {
-    val infiniteTransition = rememberInfiniteTransition(label = "ambient_glow")
-    val pulseAlpha by infiniteTransition.animateFloat(
-        initialValue = 0.35f,
-        targetValue = 0.65f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(4000, easing = FastOutSlowInEasing),
-            repeatMode = RepeatMode.Reverse
-        ),
-        label = "pulse_alpha"
+    val bgBrush = Brush.verticalGradient(
+        colors = listOf(
+            Color(0xFF060911),
+            Color(0xFF0A101D),
+            Color(0xFF070B14)
+        )
     )
 
     Box(
         modifier = modifier
             .fillMaxSize()
-            .background(DeepSpace)
+            .background(bgBrush)
     ) {
-        Canvas(modifier = Modifier.fillMaxSize()) {
-            val width = size.width
-            val height = size.height
-
-            // Top-Right Cyan/Blue Ambient Orb
-            drawCircle(
-                brush = Brush.radialGradient(
-                    colors = listOf(
-                        NeonCyan.copy(alpha = 0.18f * pulseAlpha),
-                        NeonViolet.copy(alpha = 0.08f * pulseAlpha),
-                        Color.Transparent
-                    ),
-                    center = Offset(width * 0.85f, height * 0.15f),
-                    radius = width * 0.75f
-                )
-            )
-
-            // Center-Left Indigo/Purple Ambient Orb
-            drawCircle(
-                brush = Brush.radialGradient(
-                    colors = listOf(
-                        NeonPurple.copy(alpha = 0.14f * pulseAlpha),
-                        NeonBlue.copy(alpha = 0.05f * pulseAlpha),
-                        Color.Transparent
-                    ),
-                    center = Offset(width * 0.1f, height * 0.55f),
-                    radius = width * 0.8f
-                )
-            )
-
-            // Bottom-Center Emerald/Teal Subtle Floor Glow
-            drawCircle(
-                brush = Brush.radialGradient(
-                    colors = listOf(
-                        AccentTeal.copy(alpha = 0.12f * pulseAlpha),
-                        Color.Transparent
-                    ),
-                    center = Offset(width * 0.5f, height * 0.95f),
-                    radius = width * 0.7f
-                )
-            )
-        }
-
         content()
     }
 }
 
 /**
- * Glassmorphic container with frosted translucent surface, dual-tone gradient fill,
- * and high-definition crystal border reflection.
+ * High-end Liquid Glass container (matching Figma Liquid Glass UI / VisionOS style)
+ * with frosted translucent surface, specular top highlight reflection, and glossy border.
  */
 @Composable
 fun GlassCard(
     modifier: Modifier = Modifier,
-    shape: Shape = RoundedCornerShape(22.dp),
-    backgroundColor: Color = GlassSurfaceDark,
+    shape: Shape = RoundedCornerShape(26.dp),
+    backgroundColor: Color = LiquidGlassSurface,
     borderColor: Color = Color.White,
-    borderAlpha: Float = 0.20f,
+    borderAlpha: Float = 0.28f,
     onClick: (() -> Unit)? = null,
     content: @Composable BoxScope.() -> Unit
 ) {
+    // Multi-stop liquid glass surface reflection
     val glassBrush = Brush.verticalGradient(
         colors = listOf(
-            backgroundColor.copy(alpha = 0.75f),
-            backgroundColor.copy(alpha = 0.45f)
+            backgroundColor.copy(alpha = 0.85f),
+            backgroundColor.copy(alpha = 0.50f)
         )
     )
 
+    // Specular liquid reflection border: bright specular reflection at top-left, fading gracefully
     val borderBrush = Brush.linearGradient(
         colors = listOf(
             borderColor.copy(alpha = borderAlpha),
-            borderColor.copy(alpha = borderAlpha * 0.2f),
-            borderColor.copy(alpha = borderAlpha * 0.6f)
+            NeonCyan.copy(alpha = borderAlpha * 0.45f),
+            borderColor.copy(alpha = borderAlpha * 0.12f)
         ),
         start = Offset(0f, 0f),
         end = Offset(Float.POSITIVE_INFINITY, Float.POSITIVE_INFINITY)
@@ -144,6 +100,77 @@ fun GlassCard(
             .clip(shape)
             .then(clickableModifier)
             .background(glassBrush)
+            .border(BorderStroke(1.2.dp, borderBrush), shape = shape)
+    ) {
+        // Specular inner top sheen bar (giving the physical look of liquid glass)
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(1.dp)
+                .background(
+                    Brush.horizontalGradient(
+                        colors = listOf(
+                            Color.Transparent,
+                            Color.White.copy(alpha = 0.40f),
+                            Color.Transparent
+                        )
+                    )
+                )
+        )
+        content()
+    }
+}
+
+/**
+ * Liquid Glass Pill container for interactive pill rows and capsules.
+ */
+@Composable
+fun LiquidGlassPill(
+    modifier: Modifier = Modifier,
+    isSelected: Boolean = false,
+    onClick: (() -> Unit)? = null,
+    content: @Composable BoxScope.() -> Unit
+) {
+    val shape = RoundedCornerShape(20.dp)
+    val pillBg = if (isSelected) {
+        Brush.horizontalGradient(
+            listOf(
+                NeonCyan.copy(alpha = 0.22f),
+                NeonBlue.copy(alpha = 0.12f)
+            )
+        )
+    } else {
+        Brush.horizontalGradient(
+            listOf(
+                Color.White.copy(alpha = 0.08f),
+                Color.White.copy(alpha = 0.03f)
+            )
+        )
+    }
+
+    val borderBrush = if (isSelected) {
+        Brush.horizontalGradient(
+            listOf(
+                NeonCyan.copy(alpha = 0.8f),
+                NeonBlue.copy(alpha = 0.4f)
+            )
+        )
+    } else {
+        Brush.horizontalGradient(
+            listOf(
+                Color.White.copy(alpha = 0.18f),
+                Color.White.copy(alpha = 0.06f)
+            )
+        )
+    }
+
+    val clickableModifier = if (onClick != null) Modifier.clickable(onClick = onClick) else Modifier
+
+    Box(
+        modifier = modifier
+            .clip(shape)
+            .then(clickableModifier)
+            .background(pillBg)
             .border(BorderStroke(1.dp, borderBrush), shape = shape)
     ) {
         content()

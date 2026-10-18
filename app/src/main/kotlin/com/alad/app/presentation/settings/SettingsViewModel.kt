@@ -50,19 +50,39 @@ class SettingsViewModel(private val repository: UserPreferencesRepository) : Vie
         }
     }
 
-    fun updateApiKey(key: String) { _userApiKey.value = key }
-    fun updateVolumeRatio(ratio: Float) { _volumeRatio.value = ratio }
-    fun updateOriginalVolume(volume: Float) { _originalVolume.value = volume }
-    fun updateVoicePersona(voice: String) { _voicePersona.value = voice }
-    fun updateDubbingMode(mode: String) { _dubbingMode.value = mode }
-    fun updateShowDualSubtitles(show: Boolean) { _showDualSubtitles.value = show }
+    fun updateApiKey(key: String) {
+        _userApiKey.value = key
+        viewModelScope.launch(exceptionHandler) {
+            repository.updateApiKey(key)
+        }
+    }
+
+    fun updateVoicePersona(voice: String) {
+        _voicePersona.value = voice
+        viewModelScope.launch(exceptionHandler) {
+            repository.updateVoicePersona(voice)
+        }
+    }
+
+    fun updateDubbingMode(mode: String) {
+        _dubbingMode.value = mode
+        viewModelScope.launch(exceptionHandler) {
+            repository.updateDubbingMode(mode)
+        }
+    }
+
+    fun updateShowDualSubtitles(show: Boolean) {
+        _showDualSubtitles.value = show
+        viewModelScope.launch(exceptionHandler) {
+            repository.updateShowDualSubtitles(show)
+            com.alad.app.data.repository.DubbingSessionRepository.setShowDualSubtitles(show)
+        }
+    }
 
     fun saveSettings() {
         viewModelScope.launch(exceptionHandler) {
             try {
                 repository.updateApiKey(_userApiKey.value)
-                repository.updateVolumeRatio(_volumeRatio.value)
-                repository.updateOriginalVolume(_originalVolume.value)
                 repository.updateVoicePersona(_voicePersona.value)
                 repository.updateDubbingMode(_dubbingMode.value)
                 repository.updateShowDualSubtitles(_showDualSubtitles.value)

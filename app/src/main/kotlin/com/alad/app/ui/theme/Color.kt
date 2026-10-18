@@ -37,3 +37,12 @@ val NeonRose = Color(0xFFF43F5E)
 val MixerDubbingTrack = Color(0xFF00F5FF)
 val MixerOriginalTrack = Color(0xFFA855F7)
 val MixerMutedTrack = Color(0xFF475569)
+
+// Liquid Glass Design Tokens (matching high-end Figma Dashboard & iOS Vision glass)
+val LiquidGlassSurface = Color(0x38121E36)
+val LiquidGlassSurfaceElevated = Color(0x55172644)
+val LiquidGlassPill = Color(0x261B2B48)
+val LiquidGlassBorder = Color(0x33FFFFFF)
+val LiquidGlassHighlight = Color(0x55FFFFFF)
+val LiquidCyanSheen = Color(0x3038BDF8)
+

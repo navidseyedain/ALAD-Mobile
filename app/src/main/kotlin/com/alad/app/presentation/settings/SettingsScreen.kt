@@ -39,8 +39,6 @@ fun SettingsScreen(viewModel: SettingsViewModel, onBack: () -> Unit = {}) {
     val context = LocalContext.current
     val uriHandler = LocalUriHandler.current
     val apiKey by viewModel.userApiKey.collectAsState()
-    val volumeRatio by viewModel.volumeRatio.collectAsState()
-    val originalVolume by viewModel.originalVolume.collectAsState()
     val selectedVoice by viewModel.voicePersona.collectAsState()
     val selectedMode by viewModel.dubbingMode.collectAsState()
     val showDualSubtitles by viewModel.showDualSubtitles.collectAsState()
@@ -225,118 +223,7 @@ fun SettingsScreen(viewModel: SettingsViewModel, onBack: () -> Unit = {}) {
                     }
                 }
 
-                // 2. Audio Mixer Default Levels
-                GlassCard(
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(24.dp),
-                    borderColor = NeonCyan,
-                    borderAlpha = 0.20f
-                ) {
-                    Column(modifier = Modifier.padding(20.dp)) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Box(
-                                modifier = Modifier
-                                    .size(40.dp)
-                                    .clip(CircleShape)
-                                    .background(NeonCyan.copy(alpha = 0.15f)),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Default.Tune,
-                                    contentDescription = null,
-                                    tint = NeonCyan,
-                                    modifier = Modifier.size(20.dp)
-                                )
-                            }
-
-                            Spacer(modifier = Modifier.width(12.dp))
-
-                            Column {
-                                Text(
-                                    text = stringResource(R.string.audio_mixer),
-                                    fontWeight = FontWeight.Bold,
-                                    color = Color.White,
-                                    fontSize = 16.sp
-                                )
-                                Text(
-                                    text = stringResource(R.string.volume_description),
-                                    color = TextSecondary,
-                                    fontSize = 12.sp
-                                )
-                            }
-                        }
-
-                        Spacer(modifier = Modifier.height(16.dp))
-
-                        // A. Default AI Dubbing Volume
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Text(
-                                text = stringResource(R.string.dubbed_voice_volume),
-                                color = Color.White,
-                                fontSize = 13.sp,
-                                fontWeight = FontWeight.Medium
-                            )
-                            Text(
-                                text = "${(volumeRatio * 100).toInt()}%",
-                                color = NeonCyan,
-                                fontSize = 12.sp,
-                                fontWeight = FontWeight.Bold
-                            )
-                        }
-
-                        Slider(
-                            value = volumeRatio,
-                            onValueChange = viewModel::updateVolumeRatio,
-                            valueRange = 0f..1f,
-                            colors = SliderDefaults.colors(
-                                thumbColor = NeonCyan,
-                                activeTrackColor = NeonCyan,
-                                inactiveTrackColor = Color.White.copy(alpha = 0.15f)
-                            ),
-                            modifier = Modifier.fillMaxWidth()
-                        )
-
-                        Spacer(modifier = Modifier.height(12.dp))
-
-                        // B. Default Original Video Volume
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Text(
-                                text = stringResource(R.string.original_media_volume),
-                                color = Color.White,
-                                fontSize = 13.sp,
-                                fontWeight = FontWeight.Medium
-                            )
-                            Text(
-                                text = "${(originalVolume * 100).toInt()}%",
-                                color = NeonPurple,
-                                fontSize = 12.sp,
-                                fontWeight = FontWeight.Bold
-                            )
-                        }
-
-                        Slider(
-                            value = originalVolume,
-                            onValueChange = viewModel::updateOriginalVolume,
-                            valueRange = 0f..1f,
-                            colors = SliderDefaults.colors(
-                                thumbColor = NeonPurple,
-                                activeTrackColor = NeonPurple,
-                                inactiveTrackColor = Color.White.copy(alpha = 0.15f)
-                            ),
-                            modifier = Modifier.fillMaxWidth()
-                        )
-                    }
-                }
-
-                // 3. AI Voice Persona Selection Card
+                // 2. AI Voice Persona Selection Card
                 GlassCard(
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(24.dp),
