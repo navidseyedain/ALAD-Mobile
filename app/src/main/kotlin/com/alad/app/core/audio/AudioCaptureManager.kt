@@ -18,7 +18,7 @@ class AudioCaptureManager {
         const val CHANNEL_CONFIG = AudioFormat.CHANNEL_IN_MONO
         const val AUDIO_FORMAT = AudioFormat.ENCODING_PCM_16BIT
         val MIN_BUFFER_SIZE = AudioRecord.getMinBufferSize(SAMPLE_RATE, CHANNEL_CONFIG, AUDIO_FORMAT)
-        const val CHUNK_SIZE = 3200 // 100ms of 16kHz 16-bit mono PCM (Gemini Live specification)
+        const val CHUNK_SIZE = 1280 // 40ms of 16kHz 16-bit mono PCM for ultra-low latency streaming
     }
 
     @SuppressLint("MissingPermission")
@@ -43,7 +43,7 @@ class AudioCaptureManager {
                 .setChannelMask(CHANNEL_CONFIG)
                 .build()
 
-            val bufferSize = maxOf(MIN_BUFFER_SIZE, CHUNK_SIZE * 2)
+            val bufferSize = maxOf(MIN_BUFFER_SIZE, CHUNK_SIZE * 4)
 
             audioRecord = AudioRecord.Builder()
                 .setAudioFormat(format)
@@ -61,14 +61,15 @@ class AudioCaptureManager {
             Log.d(TAG, "AudioPlaybackCapture started successfully. Recording state: ${audioRecord?.recordingState}")
             
             Thread({
+                android.os.Process.setThreadPriority(android.os.Process.THREAD_PRIORITY_URGENT_AUDIO)
                 val buffer = ByteArray(CHUNK_SIZE)
                 var chunksRead = 0
                 while (isRecording) {
                     val read = audioRecord?.read(buffer, 0, buffer.size) ?: 0
                     if (read > 0) {
                         chunksRead++
-                        if (chunksRead % 50 == 0) {
-                            Log.d(TAG, "Captured 50 chunks of size $read ($CHUNK_SIZE expected)")
+                        if (chunksRead % 100 == 0) {
+                            Log.d(TAG, "Captured 100 chunks of size $read ($CHUNK_SIZE expected)")
                         }
                         onAudioData(buffer.copyOf(read))
                     }

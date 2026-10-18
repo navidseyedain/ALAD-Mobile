@@ -7,13 +7,29 @@ import android.media.AudioFormat
 import android.media.AudioManager
 import android.media.AudioTrack
 import android.os.Build
+import android.util.Log
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
+import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.launch
 
 class AudioPlayerManager(private val context: Context) {
     private var audioTrack: AudioTrack? = null
     private var audioManager: AudioManager? = null
     private var focusRequest: AudioFocusRequest? = null
 
+    private val playerScope = CoroutineScope(Dispatchers.IO + SupervisorJob())
+    private val audioChannel = Channel<ByteArray>(Channel.UNLIMITED)
+    private var playbackJob: Job? = null
+
+    private var initialMusicVolume: Int = -1
+    private var maxMusicVolume: Int = 15
+
     companion object {
+        private const val TAG = "AudioPlayerManager"
         private const val SAMPLE_RATE = 24000
         private const val CHANNEL_CONFIG = AudioFormat.CHANNEL_OUT_MONO
         private const val AUDIO_FORMAT = AudioFormat.ENCODING_PCM_16BIT
@@ -22,6 +38,13 @@ class AudioPlayerManager(private val context: Context) {
     fun start() {
         audioManager = context.getSystemService(Context.AUDIO_SERVICE) as AudioManager
         
+        try {
+            initialMusicVolume = audioManager?.getStreamVolume(AudioManager.STREAM_MUSIC) ?: -1
+            maxMusicVolume = audioManager?.getStreamMaxVolume(AudioManager.STREAM_MUSIC) ?: 15
+        } catch (e: Exception) {
+            Log.w(TAG, "Could not query STREAM_MUSIC volume", e)
+        }
+
         val audioAttributes = AudioAttributes.Builder()
             .setUsage(AudioAttributes.USAGE_ASSISTANT)
             .setContentType(AudioAttributes.CONTENT_TYPE_SPEECH)
@@ -44,39 +67,90 @@ class AudioPlayerManager(private val context: Context) {
             )
         }
 
-        val bufferSize = AudioTrack.getMinBufferSize(SAMPLE_RATE, CHANNEL_CONFIG, AUDIO_FORMAT)
-        
-        audioTrack = AudioTrack(
-            audioAttributes,
-            AudioFormat.Builder()
-                .setSampleRate(SAMPLE_RATE)
-                .setChannelMask(CHANNEL_CONFIG)
-                .setEncoding(AUDIO_FORMAT)
-                .build(),
-            bufferSize,
-            AudioTrack.MODE_STREAM,
-            AudioManager.AUDIO_SESSION_ID_GENERATE
-        )
+        val minBufferSize = AudioTrack.getMinBufferSize(SAMPLE_RATE, CHANNEL_CONFIG, AUDIO_FORMAT)
+        val bufferSize = maxOf(minBufferSize, 4096 * 2)
+
+        val audioFormat = AudioFormat.Builder()
+            .setSampleRate(SAMPLE_RATE)
+            .setChannelMask(CHANNEL_CONFIG)
+            .setEncoding(AUDIO_FORMAT)
+            .build()
+
+        audioTrack = AudioTrack.Builder()
+            .setAudioAttributes(audioAttributes)
+            .setAudioFormat(audioFormat)
+            .setBufferSizeInBytes(bufferSize)
+            .setTransferMode(AudioTrack.MODE_STREAM)
+            .setPerformanceMode(AudioTrack.PERFORMANCE_MODE_LOW_LATENCY)
+            .build()
+
         audioTrack?.play()
+
+        playbackJob = playerScope.launch {
+            for (chunk in audioChannel) {
+                try {
+                    audioTrack?.write(chunk, 0, chunk.size)
+                } catch (e: Exception) {
+                    Log.e(TAG, "Error writing audio chunk", e)
+                }
+            }
+        }
     }
 
     fun playAudioData(data: ByteArray) {
-        audioTrack?.write(data, 0, data.size)
+        audioChannel.trySend(data)
     }
-    
-    fun setVolume(volume: Float) {
-        audioTrack?.setVolume(volume)
+
+    fun setDubbingAudio(volume: Float, isMuted: Boolean) {
+        val targetVolume = if (isMuted) 0f else volume.coerceIn(0f, 1f)
+        try {
+            audioTrack?.setVolume(targetVolume)
+        } catch (e: Exception) {
+            Log.e(TAG, "Error setting dubbing volume", e)
+        }
+    }
+
+    fun setOriginalMediaAudio(volumeRatio: Float, isMuted: Boolean) {
+        try {
+            if (initialMusicVolume <= 0) return
+            val targetVolume = if (isMuted) {
+                0
+            } else {
+                (initialMusicVolume * volumeRatio.coerceIn(0f, 1f)).toInt().coerceIn(0, maxMusicVolume)
+            }
+            audioManager?.setStreamVolume(AudioManager.STREAM_MUSIC, targetVolume, 0)
+        } catch (e: Exception) {
+            Log.w(TAG, "Error adjusting STREAM_MUSIC volume", e)
+        }
     }
 
     fun stop() {
+        // Restore original system music volume
+        if (initialMusicVolume >= 0) {
+            try {
+                audioManager?.setStreamVolume(AudioManager.STREAM_MUSIC, initialMusicVolume, 0)
+            } catch (e: Exception) {
+                Log.w(TAG, "Error restoring STREAM_MUSIC volume", e)
+            }
+        }
+
+        playbackJob?.cancel()
+        playbackJob = null
+        playerScope.cancel()
+
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             focusRequest?.let { audioManager?.abandonAudioFocusRequest(it) }
         } else {
             @Suppress("DEPRECATION")
             audioManager?.abandonAudioFocus { }
         }
-        audioTrack?.stop()
-        audioTrack?.release()
+
+        try {
+            audioTrack?.stop()
+            audioTrack?.release()
+        } catch (e: Exception) {
+            Log.w(TAG, "Error stopping audioTrack", e)
+        }
         audioTrack = null
     }
 }
