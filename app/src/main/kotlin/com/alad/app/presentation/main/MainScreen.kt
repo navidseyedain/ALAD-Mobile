@@ -22,6 +22,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.VolumeOff
 import androidx.compose.material.icons.automirrored.filled.VolumeUp
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
@@ -561,7 +562,7 @@ fun MainScreen(
                                     contentAlignment = Alignment.Center
                                 ) {
                                     Icon(
-                                        imageVector = if (isDubbingMuted) Icons.Default.VolumeOff else Icons.Default.VolumeUp,
+                                        imageVector = if (isDubbingMuted) Icons.AutoMirrored.Filled.VolumeOff else Icons.AutoMirrored.Filled.VolumeUp,
                                         contentDescription = "Mute Dubbing",
                                         tint = if (isDubbingMuted) NeonCoral else Color.White,
                                         modifier = Modifier.size(15.dp)
@@ -617,7 +618,7 @@ fun MainScreen(
                                     contentAlignment = Alignment.Center
                                 ) {
                                     Icon(
-                                        imageVector = if (isOriginalMuted) Icons.Default.VolumeOff else Icons.AutoMirrored.Filled.VolumeUp,
+                                        imageVector = if (isOriginalMuted) Icons.AutoMirrored.Filled.VolumeOff else Icons.AutoMirrored.Filled.VolumeUp,
                                         contentDescription = "Mute Original Audio",
                                         tint = if (isOriginalMuted) NeonCoral else Color.White,
                                         modifier = Modifier.size(15.dp)

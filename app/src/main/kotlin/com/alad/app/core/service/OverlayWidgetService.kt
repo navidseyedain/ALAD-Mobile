@@ -18,6 +18,8 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.VolumeOff
+import androidx.compose.material.icons.automirrored.filled.VolumeUp
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Subtitles
@@ -371,7 +373,7 @@ fun FloatingControllerCapsule(
                     }
             ) {
                 Icon(
-                    imageVector = if (isDubbingMuted) Icons.Default.VolumeOff else Icons.Default.VolumeUp,
+                    imageVector = if (isDubbingMuted) Icons.AutoMirrored.Filled.VolumeOff else Icons.AutoMirrored.Filled.VolumeUp,
                     contentDescription = "Toggle Mute",
                     tint = if (isDubbingMuted) NeonCoral else Color.White.copy(alpha = 0.85f),
                     modifier = Modifier.size(14.dp)

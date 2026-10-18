@@ -1,5 +1,6 @@
 package com.alad.app.presentation.settings
 
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.*
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsPressedAsState
