@@ -92,8 +92,8 @@
 ### 🎥 ویدیوی دموی عملکرد برنامه
 
 <div align="center">
-  <!-- 🎥 ویدیوی دمو: لینک ویدیوی آپلود شده را جایگزین کنید -->
-  <video src="https://github.com/user-attachments/assets/54efbdc7-e19f-49ac-9afd-aafa0d73650a" controls="controls" width="360" poster="docs/4.jpg">
+  <!-- 🎥 ویدیوی دمو: لینک ویدیوی آپلود شده توسط کاربر -->
+  <video src="https://github.com/user-attachments/assets/5c649309-53c8-4f4d-b75f-5ea110d5abfe" controls="controls" width="360" poster="docs/4.jpg">
     <p>ویدیوی دموی عملکرد برنامه در این بخش قرار دارد. با دانلود فایل نصبی می‌توانید دوبله زنده را خودتان تجربه کنید.</p>
   </video>
   <br/>
