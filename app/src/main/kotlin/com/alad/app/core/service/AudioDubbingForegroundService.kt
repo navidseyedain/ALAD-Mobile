@@ -138,9 +138,21 @@ class AudioDubbingForegroundService : Service() {
 
                 val apiKey = repository.apiKeyFlow.first()
                 val targetLang = repository.targetLangFlow.first()
+                val targetDialect = repository.targetDialectFlow.first()
                 val volumeRatio = repository.volumeRatioFlow.first()
+                val isDubbingMuted = repository.isDubbingMutedFlow.first()
+                val originalVolume = repository.originalVolumeFlow.first()
+                val isOriginalMuted = repository.isOriginalMutedFlow.first()
                 val voicePersona = repository.voicePersonaFlow.first()
                 val dubbingMode = repository.dubbingModeFlow.first()
+                val showDualSubtitles = repository.showDualSubtitlesFlow.first()
+
+                // Sync repository values into the active session
+                DubbingSessionRepository.setDubbingVolume(volumeRatio)
+                DubbingSessionRepository.setDubbingMuted(isDubbingMuted)
+                DubbingSessionRepository.setOriginalVolumeRatio(originalVolume)
+                DubbingSessionRepository.setOriginalMuted(isOriginalMuted)
+                DubbingSessionRepository.setShowDualSubtitles(showDualSubtitles)
 
                 val okHttpClient = OkHttpClient.Builder()
                     .pingInterval(15, TimeUnit.SECONDS)
@@ -149,11 +161,12 @@ class AudioDubbingForegroundService : Service() {
 
                 webSocketManager = ALADWebSocketManager(okHttpClient)
 
-                // Only start AudioPlayerManager if not in SUBTITLE_ONLY mode
+                // Initialize AudioPlayerManager if not in SUBTITLE_ONLY mode
                 if (dubbingMode != UserPreferencesRepository.MODE_SUBTITLE_ONLY) {
                     audioPlayerManager = AudioPlayerManager(applicationContext)
                     audioPlayerManager?.start()
-                    audioPlayerManager?.setVolume(volumeRatio)
+                    audioPlayerManager?.setDubbingAudio(volumeRatio, isDubbingMuted)
+                    audioPlayerManager?.setOriginalMediaAudio(originalVolume, isOriginalMuted)
                 }
 
                 webSocketManager?.onStatusChanged = { status ->
@@ -162,6 +175,10 @@ class AudioDubbingForegroundService : Service() {
 
                 webSocketManager?.onTextMessageReceived = { textDelta ->
                     DubbingSessionRepository.appendSubtitleText(textDelta)
+                }
+
+                webSocketManager?.onSourceTextReceived = { sourceChunk ->
+                    DubbingSessionRepository.appendSourceSubtitleText(sourceChunk)
                 }
 
                 webSocketManager?.onTurnComplete = {
@@ -179,33 +196,57 @@ class AudioDubbingForegroundService : Service() {
                     sourceLang = "",
                     targetLang = targetLang,
                     voicePersona = voicePersona,
-                    dubbingMode = dubbingMode
+                    dubbingMode = dubbingMode,
+                    targetDialect = targetDialect
                 )
 
-                // Dynamic observation for target language changes during dubbing
+                // Dynamic observation for audio controls and settings
                 settingsObservationJob?.cancel()
                 settingsObservationJob = serviceScope.launch {
-                    try {
+                    // 1. Reactive dubbing volume updates
+                    launch {
+                        kotlinx.coroutines.flow.combine(
+                            DubbingSessionRepository.dubbingVolume,
+                            DubbingSessionRepository.isDubbingMuted
+                        ) { vol, muted -> Pair(vol, muted) }.collect { (vol, muted) ->
+                            audioPlayerManager?.setDubbingAudio(vol, muted)
+                        }
+                    }
+
+                    // 2. Reactive original media volume & ducking updates
+                    launch {
+                        kotlinx.coroutines.flow.combine(
+                            DubbingSessionRepository.originalVolumeRatio,
+                            DubbingSessionRepository.isOriginalMuted
+                        ) { ratio, muted -> Pair(ratio, muted) }.collect { (ratio, muted) ->
+                            audioPlayerManager?.setOriginalMediaAudio(ratio, muted)
+                        }
+                    }
+
+                    // 3. Dynamic observation for language/dialect/voice changes during session
+                    launch {
                         var firstEmit = true
-                        repository.targetLangFlow.collect { newLang ->
+                        kotlinx.coroutines.flow.combine(
+                            repository.targetLangFlow,
+                            repository.targetDialectFlow,
+                            repository.voicePersonaFlow
+                        ) { lang, dialect, voice -> Triple(lang, dialect, voice) }.collect { (newLang, newDialect, newVoice) ->
                             if (firstEmit) {
                                 firstEmit = false
                             } else {
                                 val currentKey = repository.apiKeyFlow.first()
-                                val currentVoice = repository.voicePersonaFlow.first()
                                 val currentMode = repository.dubbingModeFlow.first()
                                 webSocketManager?.disconnect()
                                 webSocketManager?.connect(
                                     apiKey = currentKey,
                                     sourceLang = "",
                                     targetLang = newLang,
-                                    voicePersona = currentVoice,
-                                    dubbingMode = currentMode
+                                    voicePersona = newVoice,
+                                    dubbingMode = currentMode,
+                                    targetDialect = newDialect
                                 )
                             }
                         }
-                    } catch (e: Exception) {
-                        Log.e(TAG, "Error in settings observation flow", e)
                     }
                 }
 

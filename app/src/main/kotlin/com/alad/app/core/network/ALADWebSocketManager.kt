@@ -11,6 +11,7 @@ class ALADWebSocketManager(private val client: OkHttpClient) {
     private var webSocket: WebSocket? = null
     var onBinaryMessageReceived: ((ByteArray) -> Unit)? = null
     var onTextMessageReceived: ((String) -> Unit)? = null
+    var onSourceTextReceived: ((String) -> Unit)? = null
     var onTurnComplete: (() -> Unit)? = null
     var onStatusChanged: ((String) -> Unit)? = null
 
@@ -22,16 +23,19 @@ class ALADWebSocketManager(private val client: OkHttpClient) {
     private var isSetupComplete = false
     private var currentVoicePersona = "Puck"
     private var currentDubbingMode = "HYBRID"
+    private var currentTargetDialect = ""
 
     fun connect(
         apiKey: String,
         sourceLang: String,
         targetLang: String,
         voicePersona: String = "Puck",
-        dubbingMode: String = "HYBRID"
+        dubbingMode: String = "HYBRID",
+        targetDialect: String = ""
     ) {
         currentVoicePersona = voicePersona
         currentDubbingMode = dubbingMode
+        currentTargetDialect = targetDialect
         val finalUrl = "$GEMINI_WS_URL?key=$apiKey"
         val request = Request.Builder().url(finalUrl).build()
         isSetupComplete = false
@@ -40,7 +44,7 @@ class ALADWebSocketManager(private val client: OkHttpClient) {
             override fun onOpen(webSocket: WebSocket, response: Response) {
                 Log.d(TAG, "Connected to Gemini Live API")
                 onStatusChanged?.invoke("Connected")
-                sendGeminiSetup(targetLang, currentVoicePersona, currentDubbingMode)
+                sendGeminiSetup(targetLang, currentVoicePersona, currentDubbingMode, currentTargetDialect)
             }
 
             override fun onMessage(webSocket: WebSocket, text: String) {
@@ -69,6 +73,7 @@ class ALADWebSocketManager(private val client: OkHttpClient) {
                                 val sourceText = inputTranscription.optString("text", "")
                                 if (sourceText.isNotEmpty()) {
                                     Log.d(TAG, "Source speech input: $sourceText")
+                                    onSourceTextReceived?.invoke(sourceText)
                                 }
                             }
 
@@ -139,8 +144,13 @@ class ALADWebSocketManager(private val client: OkHttpClient) {
         })
     }
 
-    private fun sendGeminiSetup(targetLang: String, voicePersona: String, dubbingMode: String) {
+    private fun sendGeminiSetup(targetLang: String, voicePersona: String, dubbingMode: String, targetDialect: String) {
         val targetLangCode = targetLang.split("-")[0]
+
+        val dialectInstruction = com.alad.app.presentation.main.supportedDialects[targetLangCode]
+            ?.find { it.code.equals(targetDialect, ignoreCase = true) }
+            ?.promptInstruction ?: if (targetDialect.isNotEmpty()) "Speak and translate in $targetDialect dialect" else ""
+
         val setupPayload = JSONObject().apply {
             put("setup", JSONObject().apply {
                 put("model", "models/gemini-3.5-live-translate-preview")
@@ -160,6 +170,15 @@ class ALADWebSocketManager(private val client: OkHttpClient) {
                         put("echoTargetLanguage", true)
                     })
                 })
+
+                if (dialectInstruction.isNotEmpty()) {
+                    put("systemInstruction", JSONObject().apply {
+                        put("parts", JSONArray().put(JSONObject().apply {
+                            put("text", "You are an expert real-time AI live audio dubber. $dialectInstruction. Maintain natural pacing and high clarity.")
+                        }))
+                    })
+                }
+
                 // Direct children of BidiGenerateContentSetup according to Google Gemini Live API specification
                 put("inputAudioTranscription", JSONObject())
                 put("outputAudioTranscription", JSONObject())

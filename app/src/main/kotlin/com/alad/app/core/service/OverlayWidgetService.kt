@@ -355,6 +355,31 @@ fun FloatingControllerCapsule(
 
             Spacer(modifier = Modifier.width(4.dp))
 
+            // Quick Mute Toggle Button
+            val isDubbingMuted by DubbingSessionRepository.isDubbingMuted.collectAsState()
+            Box(
+                contentAlignment = Alignment.Center,
+                modifier = Modifier
+                    .size(26.dp)
+                    .clip(CircleShape)
+                    .background(
+                        if (isDubbingMuted) NeonCoral.copy(alpha = 0.25f) else Color.White.copy(alpha = 0.08f)
+                    )
+                    .clickable {
+                        haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                        DubbingSessionRepository.toggleDubbingMute()
+                    }
+            ) {
+                Icon(
+                    imageVector = if (isDubbingMuted) Icons.Default.VolumeOff else Icons.Default.VolumeUp,
+                    contentDescription = "Toggle Mute",
+                    tint = if (isDubbingMuted) NeonCoral else Color.White.copy(alpha = 0.85f),
+                    modifier = Modifier.size(14.dp)
+                )
+            }
+
+            Spacer(modifier = Modifier.width(4.dp))
+
             // Subtitle Quick Toggle Button
             Box(
                 contentAlignment = Alignment.Center,
@@ -408,6 +433,8 @@ fun FloatingCinemaSubtitles(
     onDismiss: () -> Unit
 ) {
     val liveSubtitleText by DubbingSessionRepository.liveSubtitleText.collectAsState()
+    val liveSourceSubtitleText by DubbingSessionRepository.liveSourceSubtitleText.collectAsState()
+    val showDualSubtitles by DubbingSessionRepository.showDualSubtitles.collectAsState()
     val connectionStatus by DubbingSessionRepository.connectionStatus.collectAsState()
 
     val infiniteTransition = rememberInfiniteTransition(label = "listening")
@@ -424,7 +451,7 @@ fun FloatingCinemaSubtitles(
     Box(
         modifier = Modifier
             .padding(horizontal = 16.dp)
-            .widthIn(min = 240.dp, max = 350.dp)
+            .widthIn(min = 260.dp, max = 360.dp)
             .clip(RoundedCornerShape(20.dp))
             .background(
                 Brush.verticalGradient(
@@ -506,23 +533,36 @@ fun FloatingCinemaSubtitles(
                 }
             }
 
-            // Subtitle Content
-            if (liveSubtitleText.isNotEmpty()) {
-                Text(
-                    text = liveSubtitleText,
-                    color = Color.White,
-                    fontSize = 15.sp,
-                    lineHeight = 22.sp,
-                    fontWeight = FontWeight.SemiBold,
-                    style = TextStyle(
-                        shadow = Shadow(
-                            color = Color.Black.copy(alpha = 0.85f),
-                            offset = Offset(1f, 1f),
-                            blurRadius = 3f
-                        )
-                    ),
-                    modifier = Modifier.fillMaxWidth()
-                )
+            // Subtitle Content (Dual display if available)
+            if (liveSubtitleText.isNotEmpty() || (showDualSubtitles && liveSourceSubtitleText.isNotEmpty())) {
+                if (showDualSubtitles && liveSourceSubtitleText.isNotEmpty()) {
+                    Text(
+                        text = liveSourceSubtitleText,
+                        color = TextSecondary.copy(alpha = 0.85f),
+                        fontSize = 12.sp,
+                        lineHeight = 17.sp,
+                        fontWeight = FontWeight.Normal,
+                        modifier = Modifier.fillMaxWidth().padding(bottom = 3.dp)
+                    )
+                }
+
+                if (liveSubtitleText.isNotEmpty()) {
+                    Text(
+                        text = liveSubtitleText,
+                        color = Color.White,
+                        fontSize = 15.sp,
+                        lineHeight = 22.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        style = TextStyle(
+                            shadow = Shadow(
+                                color = Color.Black.copy(alpha = 0.85f),
+                                offset = Offset(1f, 1f),
+                                blurRadius = 3f
+                            )
+                        ),
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
             } else {
                 Text(
                     text = stringResource(R.string.subtitles_waiting),
