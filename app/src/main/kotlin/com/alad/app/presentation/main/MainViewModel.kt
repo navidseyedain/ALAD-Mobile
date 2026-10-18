@@ -9,6 +9,7 @@ import android.util.Log
 import kotlinx.coroutines.CoroutineExceptionHandler
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
@@ -50,39 +51,13 @@ class MainViewModel(private val repository: UserPreferencesRepository) : ViewMod
     init {
         viewModelScope.launch(exceptionHandler) {
             try {
-                // Initialize session repository with saved preferences
-                repository.volumeRatioFlow.collect { vol ->
-                    DubbingSessionRepository.setDubbingVolume(vol)
-                }
+                // Initialize session repository once with saved mixer preferences
+                DubbingSessionRepository.setDubbingVolume(repository.volumeRatioFlow.first())
+                DubbingSessionRepository.setDubbingMuted(repository.isDubbingMutedFlow.first())
+                DubbingSessionRepository.setOriginalVolumeRatio(repository.originalVolumeFlow.first())
+                DubbingSessionRepository.setOriginalMuted(repository.isOriginalMutedFlow.first())
             } catch (e: Exception) {
-                Log.e("MainViewModel", "Error reading volumeRatio", e)
-            }
-        }
-        viewModelScope.launch(exceptionHandler) {
-            try {
-                repository.isDubbingMutedFlow.collect { muted ->
-                    DubbingSessionRepository.setDubbingMuted(muted)
-                }
-            } catch (e: Exception) {
-                Log.e("MainViewModel", "Error reading isDubbingMuted", e)
-            }
-        }
-        viewModelScope.launch(exceptionHandler) {
-            try {
-                repository.originalVolumeFlow.collect { ratio ->
-                    DubbingSessionRepository.setOriginalVolumeRatio(ratio)
-                }
-            } catch (e: Exception) {
-                Log.e("MainViewModel", "Error reading originalVolume", e)
-            }
-        }
-        viewModelScope.launch(exceptionHandler) {
-            try {
-                repository.isOriginalMutedFlow.collect { muted ->
-                    DubbingSessionRepository.setOriginalMuted(muted)
-                }
-            } catch (e: Exception) {
-                Log.e("MainViewModel", "Error reading isOriginalMuted", e)
+                Log.e("MainViewModel", "Error reading initial mixer settings", e)
             }
         }
         viewModelScope.launch(exceptionHandler) {

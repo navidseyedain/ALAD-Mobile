@@ -831,22 +831,6 @@ fun AnimatedWaveform(
                 brush = strokeBrush,
                 style = Stroke(width = if (isConnected) 3.5.dp.toPx() else 1.8.dp.toPx(), cap = StrokeCap.Round)
             )
-
-            // Specular glow dot on active peak
-            if (isConnected) {
-                val peakX = width * 0.5f
-                val peakY = centerY - (height * 0.26f * (0.2f + animatedAmplitude * 1.5f))
-                drawCircle(
-                    color = Color.White,
-                    radius = 4.dp.toPx(),
-                    center = Offset(peakX, peakY)
-                )
-                drawCircle(
-                    color = NeonCyan.copy(alpha = 0.5f),
-                    radius = 9.dp.toPx(),
-                    center = Offset(peakX, peakY)
-                )
-            }
         }
     }
 }

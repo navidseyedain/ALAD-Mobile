@@ -42,12 +42,14 @@ class ALADWebSocketManager(private val client: OkHttpClient) {
 
         webSocket = client.newWebSocket(request, object : WebSocketListener() {
             override fun onOpen(webSocket: WebSocket, response: Response) {
+                if (webSocket !== this@ALADWebSocketManager.webSocket) return
                 Log.d(TAG, "Connected to Gemini Live API")
                 onStatusChanged?.invoke("Connected")
                 sendGeminiSetup(targetLang, currentVoicePersona, currentDubbingMode, currentTargetDialect)
             }
 
             override fun onMessage(webSocket: WebSocket, text: String) {
+                if (webSocket !== this@ALADWebSocketManager.webSocket) return
                 Log.d(TAG, "Raw message: $text")
                 try {
                     val json = JSONObject(text)
@@ -126,17 +128,20 @@ class ALADWebSocketManager(private val client: OkHttpClient) {
             }
 
             override fun onMessage(webSocket: WebSocket, bytes: ByteString) {
+                if (webSocket !== this@ALADWebSocketManager.webSocket) return
                 val text = bytes.utf8()
                 onMessage(webSocket, text)
             }
 
             override fun onClosing(webSocket: WebSocket, code: Int, reason: String) {
+                if (webSocket !== this@ALADWebSocketManager.webSocket) return
                 isSetupComplete = false
                 Log.d(TAG, "Closing: $code $reason")
                 onStatusChanged?.invoke("Disconnected: $reason")
             }
 
             override fun onFailure(webSocket: WebSocket, t: Throwable, response: Response?) {
+                if (webSocket !== this@ALADWebSocketManager.webSocket) return
                 isSetupComplete = false
                 Log.e(TAG, "WebSocket error", t)
                 onStatusChanged?.invoke("Error: ${t.message}")
@@ -216,9 +221,11 @@ class ALADWebSocketManager(private val client: OkHttpClient) {
     }
 
     fun disconnect() {
+        isSetupComplete = false
         pendingAudio.clear()
-        webSocket?.close(1000, "User requested stop")
+        val oldSocket = webSocket
         webSocket = null
+        oldSocket?.close(1000, "User requested stop")
         onStatusChanged?.invoke("Disconnected")
     }
 }

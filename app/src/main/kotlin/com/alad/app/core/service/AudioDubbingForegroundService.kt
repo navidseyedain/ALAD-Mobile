@@ -186,8 +186,10 @@ class AudioDubbingForegroundService : Service() {
                     DubbingSessionRepository.onTurnComplete()
                 }
 
+                var activeDubbingMode = dubbingMode
+
                 webSocketManager?.onBinaryMessageReceived = { audioChunk ->
-                    if (dubbingMode != UserPreferencesRepository.MODE_SUBTITLE_ONLY) {
+                    if (activeDubbingMode != UserPreferencesRepository.MODE_SUBTITLE_ONLY) {
                         audioPlayerManager?.playAudioData(audioChunk)
                     }
                 }
@@ -224,26 +226,40 @@ class AudioDubbingForegroundService : Service() {
                         }
                     }
 
-                    // 3. Dynamic observation for language/dialect/voice changes during session
+                    // 3. Real-time voice persona timbre shaping without dropping WebSocket
                     launch {
-                        var firstEmit = true
+                        repository.voicePersonaFlow.collect { newVoice ->
+                            audioPlayerManager?.setVoicePersona(newVoice)
+                        }
+                    }
+
+                    // 4. Real-time dubbing mode switching without dropping WebSocket
+                    launch {
+                        repository.dubbingModeFlow.collect { newMode ->
+                            activeDubbingMode = newMode
+                        }
+                    }
+
+                    // 5. Reconnect WebSocket ONLY when target language or dialect genuinely changes
+                    launch {
+                        var activeLang = targetLang
+                        var activeDialect = targetDialect
                         kotlinx.coroutines.flow.combine(
                             repository.targetLangFlow,
-                            repository.targetDialectFlow,
-                            repository.voicePersonaFlow
-                        ) { lang, dialect, voice -> Triple(lang, dialect, voice) }.collect { (newLang, newDialect, newVoice) ->
-                            if (firstEmit) {
-                                firstEmit = false
-                            } else {
-                                audioPlayerManager?.setVoicePersona(newVoice)
+                            repository.targetDialectFlow
+                        ) { lang, dialect -> Pair(lang, dialect) }.collect { (newLang, newDialect) ->
+                            if (newLang != activeLang || newDialect != activeDialect) {
+                                activeLang = newLang
+                                activeDialect = newDialect
                                 val currentKey = repository.apiKeyFlow.first()
+                                val currentVoice = repository.voicePersonaFlow.first()
                                 val currentMode = repository.dubbingModeFlow.first()
                                 webSocketManager?.disconnect()
                                 webSocketManager?.connect(
                                     apiKey = currentKey,
                                     sourceLang = "",
                                     targetLang = newLang,
-                                    voicePersona = newVoice,
+                                    voicePersona = currentVoice,
                                     dubbingMode = currentMode,
                                     targetDialect = newDialect
                                 )
