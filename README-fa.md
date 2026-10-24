@@ -24,7 +24,11 @@
   بدون نیاز به اشتراک • بدون نیاز به ثبت‌نام در سایت‌های واسط • کاملاً رایگان و متن‌باز
 </p>
 
-<a href="https://github.com/navidseyedain/ALAD-Mobile/releases/latest"><img src="https://img.shields.io/badge/%D8%AF%D8%A7%D9%86%D9%84%D9%88%D8%AF_APK-v1.2.0_%D9%86%D8%B3%D8%AE%D9%87_%D9%86%D9%87%D8%A7%DB%8C%DB%8C-FF5722?style=for-the-badge&logo=android&logoColor=white" alt="دانلود APK" /></a>
+<p>
+  <a href="https://github.com/navidseyedain/ALAD-Mobile/releases/latest"><img src="https://img.shields.io/badge/%D8%AF%D8%A7%D9%86%D9%84%D9%88%D8%AF_APK-v1.2.0_%D9%86%D8%B3%D8%AE%D9%87_%D9%86%D9%87%D8%A7%DB%8C%DB%8C-FF5722?style=for-the-badge&logo=android&logoColor=white" alt="دانلود APK" /></a>
+  &nbsp;
+  <a href="https://github.com/navidseyedain/ALAD-Mobile/releases"><img src="https://img.shields.io/github/downloads/navidseyedain/ALAD-Mobile/total?style=for-the-badge&logo=github&logoColor=white&color=2ea44f" alt="تعداد کل دانلودها" /></a>
+</p>
 
 <br/>
 

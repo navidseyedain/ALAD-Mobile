@@ -24,7 +24,11 @@
   No subscriptions. No third-party accounts. 100% free and open-source.
 </p>
 
-<a href="https://github.com/navidseyedain/ALAD-Mobile/releases/latest"><img src="https://img.shields.io/badge/Download_APK-v1.2.0_Release-FF5722?style=for-the-badge&logo=android&logoColor=white" alt="Download APK" /></a>
+<p>
+  <a href="https://github.com/navidseyedain/ALAD-Mobile/releases/latest"><img src="https://img.shields.io/badge/Download_APK-v1.2.0_Release-FF5722?style=for-the-badge&logo=android&logoColor=white" alt="Download APK" /></a>
+  &nbsp;
+  <a href="https://github.com/navidseyedain/ALAD-Mobile/releases"><img src="https://img.shields.io/github/downloads/navidseyedain/ALAD-Mobile/total?style=for-the-badge&logo=github&logoColor=white&color=2ea44f" alt="Total Downloads" /></a>
+</p>
 
 <br/>
 
